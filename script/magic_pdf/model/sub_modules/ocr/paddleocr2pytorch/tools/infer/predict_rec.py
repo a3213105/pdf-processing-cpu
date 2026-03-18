@@ -95,12 +95,11 @@ class TextRecognizer(BaseOCRV20):
                 self.out_channels = list(weights.values())[-1].numpy().shape[0]
             elif self.rec_algorithm == 'SAR':
                 self.out_channels = list(weights.values())[-3].numpy().shape[0]
-
-            kwargs['out_channels'] = self.out_channels
         except Exception as e:
             # print(f"### read_pytorch_weights failed: {e}")
-            pass
+            self.out_channels=6625
         
+        kwargs['out_channels'] = self.out_channels
         super(TextRecognizer, self).__init__(network_config, **kwargs)
 
         try :

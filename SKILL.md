@@ -19,9 +19,19 @@ Convert PDF documents to Markdown format, preserving document structure, formula
 ```json
 #Complete processing
 {
-  "success": True,
-  "input_name" : "/path/to/input",
-  "output_path": "/path/to/output"
+  "success": true,
+  "message" : "processing info", 
+  "outputs":
+  [
+    {
+      "input_name" : "/path/to/input",
+      "output_path": "/path/to/output"
+    },
+    {
+      "input_name" : "/path/to/input",
+      "output_path": "/path/to/output"
+    }
+  ]
 }
 
 #Failed
@@ -35,6 +45,10 @@ Convert PDF documents to Markdown format, preserving document structure, formula
 ```bash
 #output markdown
 python $HOME/.openclaw/workspace/skills/pdf-processing-cpu/script/main.py -i /path/to/document.pdf -o output_dir
+
+#or dir for PDF
+python $HOME/.openclaw/workspace/skills/pdf-processing-cpu/script/main.py -i /path/to/documents_dir -o output_dir
+
 ```
 
 ---
