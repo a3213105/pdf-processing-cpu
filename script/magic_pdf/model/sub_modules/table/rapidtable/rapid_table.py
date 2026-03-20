@@ -36,11 +36,9 @@ class RapidTableModel(object):
             self.table_model_ov = RapidTableProcesser(slanet_plus_model_path)
             self.table_model_ov.setup_model(stream_num = 1, infer_type=self.infer_type)
             def ov_infer(*args):
-                # print(f"RapidTableModel args={args[0][0].shape}")
                 result = self.table_model_ov(args[0])
                 return result[0], result[1]
             self.table_model.table_structure.session = ov_infer
-            # print(f"### load table_model_ov model {slanet_plus_model_path}, infer_type={self.infer_type}")
         self.ocr_engine = ocr_engine
 
     def predict(self, image):
@@ -92,7 +90,6 @@ class RapidTableModel(object):
             ocr_result = None
 
         if ocr_result:
-            # print(f"RapidTableModel image={image.shape}, ocr_result={len(ocr_result)}")
             table_results = self.table_model(np.asarray(image), ocr_result)
             html_code = table_results.pred_html
             table_cell_bboxes = table_results.cell_bboxes

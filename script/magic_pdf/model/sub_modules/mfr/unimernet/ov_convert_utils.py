@@ -115,10 +115,6 @@ def patch_stateful(ov_model, key_value_input_names, key_value_output_names):
     num_attention_heads = 1
     num_beams_and_batch = None
     fuse_cache_reorder(ov_model, not_kv_inputs, key_value_input_names, batch_dim)
-    # print(f"num_attention_heads={num_attention_heads}, num_beams_and_batch={num_beams_and_batch}"
-    #       f"not_kv_inputs={not_kv_inputs}, "
-    #       f"key_value_input_names={key_value_input_names}, "
-    #       f"key_value_output_names={key_value_output_names}")
     make_stateful(
         ov_model,
         not_kv_inputs,

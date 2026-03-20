@@ -203,7 +203,6 @@ class UnimernetModel(VisionEncoderDecoderModel):
     def generate_enc(self, pixel_values, return_dict=False):
         pixel_values = pixel_values.repeat(1, 3, 1, 1)
         encoder_outputs, _ = self.encoder(pixel_values=pixel_values, return_dict=return_dict)
-        # print(f"### encoder_outputs={encoder_outputs.shape}")
         enc_kv_cache = []
         for i, layer in enumerate(self.decoder.model.decoder.layers):
             key_values = layer.enc_key_values(encoder_outputs)

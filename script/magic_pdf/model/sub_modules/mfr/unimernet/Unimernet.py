@@ -89,7 +89,6 @@ class UnimernetModel_ov :
         inputs = {'pixel_values':pixel_values}
         bs = pixel_values.shape[0]
         # enc_kv_cache = self.ov_encoder_model(inputs)
-        # print(f"ov_encoder_request inputs={pixel_values.shape}")
         self.ov_encoder_request.start_async(inputs, share_inputs=True)
         self.ov_decoder_request.reset_state()
         self.next_beam_idx = np.arange(bs, dtype=int)
@@ -126,7 +125,6 @@ class UnimernetModel_ov :
             this_peer_finished = unfinished_sequences.max() == 0
             if this_peer_finished :
                 break
-        # print(f"ov_decoder_request next_tokens={next_tokens.shape}, {self.ov_encoder_request.get_output_tensor(0).data.shape}")
         return input_ids
    
     def inference(self, sorted_images, batch_size, tqdm_enable = False) :
@@ -135,7 +133,6 @@ class UnimernetModel_ov :
         desc_str = f"MFR_OV_{self.enc_type}_{self.dec_type} Predict"
         for mf_img in tqdm(sorted_images, desc=desc_str, disable=not tqdm_enable):
             mf_img = self.transform(mf_img).unsqueeze(0)
-            # print(f"MFR mf_img={mf_img.shape}")
             outputs = self.generate(mf_img)
             mfr_res.extend(outputs)
         mfr_res = self.parser_result(mfr_res)

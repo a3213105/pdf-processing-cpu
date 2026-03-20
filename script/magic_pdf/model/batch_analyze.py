@@ -214,7 +214,6 @@ class BatchAnalyze:
                     ocr_engine=ocr_engine,
                     table_sub_model_name='slanet_plus'
                 )
-                # print(f"Table table_res_dict['table_img']={table_res_dict['table_img'].shape}")
                 html_code,table_cell_bboxes,logic_points,elapse = table_model.predict(table_res_dict['table_img'])
                 # 判断是否返回正常
                 if html_code:

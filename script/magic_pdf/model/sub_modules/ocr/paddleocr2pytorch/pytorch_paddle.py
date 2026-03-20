@@ -187,6 +187,5 @@ if __name__ == '__main__':
     else:
         tmp_res = [[box.tolist(), res] for box, res in zip(dt_boxes, rec_res)]
         ocr_res.append(tmp_res)
-    # print(ocr_res)
 
 

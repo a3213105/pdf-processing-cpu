@@ -32,7 +32,6 @@ class MagicModel:
             )
             layout_dets = model_page_info['layout_dets']
             for layout_det in layout_dets:
-
                 if layout_det.get('bbox') is not None:
                     # 兼容直接输出bbox的模型数据,如paddle
                     x0, y0, x1, y1 = layout_det['bbox']

@@ -21,7 +21,6 @@ class TextRecognizer(BaseOCRV20):
     def __init__(self, args, **kwargs):
         self.device = args.device
         self.rec_image_shape = [int(v) for v in args.rec_image_shape.split(",")]
-        # print(f"TextRecognizer: rec_image_shape={self.rec_image_shape}")
         self.character_type = args.rec_char_type
         self.rec_batch_num = args.rec_batch_num
         self.rec_algorithm = args.rec_algorithm
@@ -96,7 +95,6 @@ class TextRecognizer(BaseOCRV20):
             elif self.rec_algorithm == 'SAR':
                 self.out_channels = list(weights.values())[-3].numpy().shape[0]
         except Exception as e:
-            # print(f"### read_pytorch_weights failed: {e}")
             self.out_channels=6625
         
         kwargs['out_channels'] = self.out_channels
@@ -234,7 +232,6 @@ class TextRecognizer(BaseOCRV20):
         # resized_image -= 0.5
         # resized_image /= 0.5
         # padding_im = np.zeros((imgC, imgH, imgW), dtype=np.float32)
-        # print(f"imgC={imgC}, imgH={imgH}, imgW={imgW}")
         padding_im = np.full((imgH, imgW, imgC), 127, dtype=np.uint8)
         padding_im[:, 0:resized_w, :] = resized_image
         return padding_im
@@ -540,7 +537,6 @@ class TextRecognizer(BaseOCRV20):
                 norm_img = self.resize_norm_img_ov(norm_img, wh_ratio)
                 norm_img = norm_img[np.newaxis, :]
                 norm_img_batch.append(norm_img)
-                # print(f"OCR-Rec norm_img={norm_img.shape}, {h}, {w}, {wh_ratio}")
             desc_str=f'OCR-Rec_OV_{self.infer_type} Predict'
             with tqdm(total=img_num, desc=desc_str, disable=not tqdm_enable) as pbar:
                 preds = self.ov_rec(norm_img_batch)

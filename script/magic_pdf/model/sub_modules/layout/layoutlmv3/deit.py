@@ -412,7 +412,6 @@ class ViT(nn.Module):
         return self.pos_drop(x)
 
     def forward_features(self, x):
-        # print(f"==========shape of x is {x.shape}==========")
         B, _, H, W = x.shape
         Hp, Wp = H // self.patch_size, W // self.patch_size
         x = self.prepare_tokens(x)

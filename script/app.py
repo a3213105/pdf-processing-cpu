@@ -21,6 +21,8 @@ def pdf_process():
     pdf_raw = None
     return_md = args.return_md
     return_json = args.return_json
+    return_layout = args.return_layout
+    return_span = args.return_span
     output_dir = args.output_dir
     if 'disable_md' in request.form:
         return_md = not request.form['disable_md']
@@ -55,11 +57,14 @@ def pdf_process():
                 return_md = not json_data['disable_md']
             if 'disable_json' in json_data:
                 return_json = not json_data['disable_json']
+            if 'disable_layout' in json_data:
+                return_layout = not json_data['disable_layout']
+            if 'disable_span' in json_data:
+                return_span = not json_data['disable_span']
         else:
             return jsonify({'error': 'Invalid JSON format. Expected {"url": "address"} or {"pdf_raw": "data"}'}), 400
     elif 'filename' in request.form:
         if os.path.exists(request.form['filename']):
-           # load pdf file
             pdf_raw = load_pdf_file(request.form['filename'])
         else:
             return jsonify({'error': 'Failed to open image file'}), 400
@@ -89,7 +94,7 @@ def pdf_process():
         return jsonify({'error': 'PDF data is invalid'}), 400
 
     start_time = time.perf_counter()
-    (md_raw, json_raw, page_info, output_md_filename) = pdf_instance.process_pdf(pdf_raw, False, return_json, local_dir)
+    (md_raw, json_raw, page_info, output_md_filename) = pdf_instance.process_pdf(pdf_raw, return_md, return_json, return_layout, return_span, output_dir)
     end_time = time.perf_counter()
     print(f"Processing:  {end_time-start_time:.3f}")
     return jsonify({'json_raw': json_raw})

@@ -34,12 +34,10 @@ class YOLOv8MFDModel(object):
             self.mfd_model.predictor = (self.mfd_model._smart_load("predictor"))(overrides=args)
             self.mfd_model.predictor.setup_model(model=self.mfd_model.model, verbose=False)
             def infer(*args):
-                # print(f"YOLOv8MFDModel: args={args[0].shape}")
                 result = self.ov_yolo(args)
                 return torch.from_numpy(result[0])
             self.mfd_model.predictor.inference = infer
             # self.mfd_model.predictor.model.pt = False
-            # print(f"### load MFD YOLOV8 Openvino model from {self.ov_file_name}, infer_type={self.infer_type}")                
         else :
             self.ov_yolo = None
 
@@ -83,6 +81,4 @@ class YOLOv8MFDModel(object):
                 ]
                 for image_res in mfd_res:
                     images_mfd_res.append(image_res)
-                    # print(f"### image_res.boxes={image_res.boxes.shape[0]}")
-        # print(f"### YOLOv8 batch_predict done, images_mfd_res={len(images_mfd_res)}")
         return images_mfd_res

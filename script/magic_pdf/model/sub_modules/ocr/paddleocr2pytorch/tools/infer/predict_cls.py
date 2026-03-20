@@ -70,7 +70,6 @@ class TextClassifier(BaseOCRV20):
             self.load_pytorch_weights(self.weights_path)
             self.net.eval()
             self.net.to(self.device)
-        # print(f"### TextClassifier init enable_ov={self.enable_ov}, infer_type={self.infer_type}")
 
     def resize_norm_img(self, img):
         imgC, imgH, imgW = self.cls_image_shape

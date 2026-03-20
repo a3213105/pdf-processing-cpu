@@ -308,7 +308,6 @@ def do_predict(boxes: List[List[int]], model) -> List[int]:
             with torch.no_grad():
                 logits = model(input_ids=inputs["input_ids"], attention_mask=inputs["attention_mask"], bbox=inputs["bbox"]).logits.cpu().squeeze(0)
             ov_path = Path(model.model_path + "/layoutreader.xml")
-            # print(f"#### ov_path={ov_path}")
             if not ov_path.exists() :
                 import openvino as ov
                 class model_wrapper(torch.nn.Module) :
@@ -873,7 +872,7 @@ def pdf_parse_union(
     need_ocr_list = []
     img_crop_list = []
     text_block_list = []
-    for pange_id, page_info in pdf_info_dict.items():
+    for page_id, page_info in pdf_info_dict.items():
         for block in page_info['preproc_blocks']:
             if block['type'] in ['table', 'image']:
                 for sub_block in block['blocks']:
@@ -928,7 +927,6 @@ def pdf_parse_union(
                 # llm_aided_formula_start_time = time.time()
                 llm_aided_formula(pdf_info_dict, formula_aided_config)
                 # logger.info(f'llm aided formula time: {round(time.time() - llm_aided_formula_start_time, 2)}')
-                # print(f'### llm aided formula time: {round(time.time() - llm_aided_formula_start_time, 2)}')
         """文本优化"""
         text_aided_config = llm_aided_config.get('text_aided', None)
         if text_aided_config is not None:
@@ -936,7 +934,6 @@ def pdf_parse_union(
                 # llm_aided_text_start_time = time.time()
                 llm_aided_text(pdf_info_dict, text_aided_config)
                 # logger.info(f'llm aided text time: {round(time.time() - llm_aided_text_start_time, 2)}')
-                # print(f'### llm aided text time: {round(time.time() - llm_aided_text_start_time, 2)}')
         """标题优化"""
         title_aided_config = llm_aided_config.get('title_aided', None)
         if title_aided_config is not None:
@@ -944,7 +941,6 @@ def pdf_parse_union(
                 # llm_aided_title_start_time = time.time()
                 llm_aided_title(pdf_info_dict, title_aided_config)
                 # logger.info(f'llm aided title time: {round(time.time() - llm_aided_title_start_time, 2)}')
-                # print(f'### llm aided title time: {round(time.time() - llm_aided_title_start_time, 2)}')
     """dict转list"""
     pdf_info_list = dict_to_list(pdf_info_dict)
     new_pdf_info_dict = {
@@ -952,9 +948,6 @@ def pdf_parse_union(
     }
     # t3 = time.time()
     # clean_memory(get_device())
-    # print(f"### processing page time: {(t1 - t0)*1000:.2f} ms, pages : {len(dataset)}")
-    # print(f"### ocr page time: {(t2 - t1)*1000:.2f} ms, images : {len(img_crop_list)}, image_count={image_count}, infer_count={infer_count}")
-    # print(f"### page llm time: {(t3 - t2)*1000:.2f} ms, pdf_info_list: {len(pdf_info_dict)}")
     return new_pdf_info_dict
 
 

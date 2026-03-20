@@ -32,7 +32,6 @@ class OV_Operator(object):
         self.outputs = []
         for i in range (0,output_size):
             self.outputs.append(i)
-        # print('output: {}'.format(len(self.outputs)))
         self.input_names = []
         self.input_shapes = []
         ops = self.model.get_ordered_ops()
@@ -40,7 +39,6 @@ class OV_Operator(object):
             if it.get_type_name() == 'Parameter':
                 self.input_names.append(it.get_friendly_name())
                 self.input_shapes.append(it.partial_shape)
-                # print('input {}: {}'.format(it.get_friendly_name(),it.partial_shape))
         self.input_name = self.input_names[0]
 
     def create_single_request(self, infer_type) :
@@ -116,7 +114,6 @@ class OV_Result :
         self.results[index] = []
         values = result.values()
         for i, value in enumerate(values):
-            # print("output {} value shape {}".format(i, value.shape))
             self.results[index].append(value)
         return 
     
@@ -160,7 +157,7 @@ class YoloV8OVProcessor(OV_Operator):
     def setup_model(self, stream_num = 1, infer_type="f32", shape=None,
                     means=[0.485, 0.456, 0.406], scales=[0.229, 0.224, 0.225]) :
         ppp = PrePostProcessor(self.model)
-        print(f"self.input_names={self.input_names}")
+        # print(f"self.input_names={self.input_names}")
         ppp.input(self.input_names[0]).tensor() \
             .set_element_type(Type.u8) \
             .set_color_format(ColorFormat.BGR) \
@@ -202,7 +199,7 @@ class ClipSegProcessor(OV_Operator):
 
     def setup_model(self, stream_num = 1, infer_type="f32", means=[0.485, 0.456, 0.406], scales=[0.229, 0.224, 0.225], shape=[1, 352, 352, 3]) :
         ppp = PrePostProcessor(self.model)
-        print(f"self.input_names={self.input_names}")
+        # print(f"self.input_names={self.input_names}")
         ppp.input(self.input_names[0]).tensor() \
             .set_element_type(Type.u8) \
             .set_color_format(ColorFormat.BGR) \
@@ -594,8 +591,6 @@ class LayoutReaderProcessor(OV_Operator):
 
     def __call__(self, input_tensors) :
         # for item in input_tensors[0].items():
-        #     print(f"item[{item[0]}] = {item[1].shape}")
-        # print(f"LayoutReaderProcessor input_tensors={len(input_tensors)}, {input_tensors[0]['input_ids'].shape}")
         nsize = super().__call__(input_tensors)
  
         res = []
@@ -789,10 +784,11 @@ class CTCSimpleOCR(OV_Operator):
 
     def __call__(self, norm_img_batch_list) :
         if self.request and len(norm_img_batch_list)==1:
+            self.ocr_res.sync_clean()
             for i, input_tensor in enumerate(norm_img_batch_list):
                 result = self.request.infer(input_tensor)
                 self.ocr_res.sync_parser(result, 0)
-            return self.ocr_res.results 
+            return [self.ocr_res.results[0]]
         
         nsize=len(norm_img_batch_list)
         dyanmic_list = []

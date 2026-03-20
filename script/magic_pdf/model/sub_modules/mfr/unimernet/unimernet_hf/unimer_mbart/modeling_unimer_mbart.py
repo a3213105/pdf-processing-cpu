@@ -1492,7 +1492,6 @@ class UnimerMBartDecoder(UnimerMBartPreTrainedModel):
             return_dict (`bool`, *optional*):
                 Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
         """
-        # print(f"### UnimerMBartDecoder forward")
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1599,9 +1598,7 @@ class UnimerMBartDecoder(UnimerMBartPreTrainedModel):
                 # if encoder_hidden_states is not None:
                 #     all_cross_attentions += (layer_outputs[2],)
 
-        # print(f"###1 hidden_states={hidden_states.shape}")
         hidden_states = self.layer_norm(hidden_states)
-        # print(f"###2 hidden_states={hidden_states.shape}")
 
         # add hidden states from the last decoder layer
         if output_hidden_states:
@@ -2328,7 +2325,6 @@ class UnimerMBartForCausalLM(UnimerMBartPreTrainedModel, GenerationMixin):
         >>> list(logits.shape) == expected_shape
         True
         ```"""
-        # print(f"### UnimerMBartForCausalLM forward")
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -2373,9 +2369,7 @@ class UnimerMBartForCausalLM(UnimerMBartPreTrainedModel, GenerationMixin):
                 return_dict=return_dict,
             )
 
-        # print(f"### outputs={outputs[0].shape}") 
         logits = self.lm_head(outputs[0])
-        # print(f"### logits={logits.shape}") 
 
         loss = None
         if labels is not None:

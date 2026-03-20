@@ -7,7 +7,6 @@ if not os.getenv("FTLANG_CACHE"):
     root_dir = os.path.dirname(current_dir)
     ftlang_cache_dir = os.path.join(root_dir, 'resources', 'fasttext-langdetect')
     os.environ["FTLANG_CACHE"] = str(ftlang_cache_dir)
-    # print(os.getenv("FTLANG_CACHE"))
 
 from fast_langdetect import detect_language
 
@@ -25,7 +24,6 @@ def detect_lang(text: str) -> str:
     text = text.replace("\n", "")
     text = remove_invalid_surrogates(text)
 
-    # print(text)
     try:
         lang_upper = detect_language(text)
     except:

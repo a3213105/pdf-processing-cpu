@@ -5,14 +5,7 @@ import numpy as np
 import torch
 import uuid
 
-os.environ['FLAGS_npu_jit_compile'] = '0'  # 关闭paddle的jit编译
-os.environ['FLAGS_use_stride_kernel'] = '0'
-os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'  # 让mps可以fallback
-os.environ['NO_ALBUMENTATIONS_UPDATE'] = '1'  # 禁止albumentations检查更新
-
-
- 
-
+from magic_pdf.operators.models import InferenceResult
 from magic_pdf.model.sub_modules.model_utils import get_vram
 from magic_pdf.config.enums import SupportedPdfParseMethod
 import magic_pdf.model as model_config
@@ -391,39 +384,58 @@ def init_models(
 def may_batch_image_analyze_direct(
         images_with_extra_info: list[(np.ndarray, bool, str)],
         batch_model: BatchAnalyze):
-    doc_analyze_start = time.time()
+    # doc_analyze_start = time.time()
     results = batch_model(images_with_extra_info)
-    doc_analyze_time = round(time.time() - doc_analyze_start, 2)
+    # doc_analyze_time = round(time.time() - doc_analyze_start, 2)
     # pages = len(images_with_extra_info)
-    # print(f'doc analyze time: {doc_analyze_time}, pages={pages}')
     return results
 
-def doc_analyze_direct(
+def doc_analyze_pages(pdf_model, images_with_extra_info) :
+    MIN_BATCH_INFERENCE_SIZE = int(os.environ.get('MINERU_MIN_BATCH_INFERENCE_SIZE', 100))
+
+    if len(images_with_extra_info) >= MIN_BATCH_INFERENCE_SIZE:
+        batch_size = MIN_BATCH_INFERENCE_SIZE
+        batch_images = [images_with_extra_info[i:i+batch_size] for i in range(0, len(images_with_extra_info), batch_size)]
+    else:
+        batch_images = [images_with_extra_info]
+
+    results = []
+    for batch_image in batch_images:
+        result = may_batch_image_analyze_direct(batch_image, pdf_model)
+        results.extend(result)
+    return results
+
+def doc_analyze_direct_0(
     pdf_bytes: bytes,
     pdf_model: BatchAnalyze,
-    enable_ov: bool,
-    Layout_infer_type: str,
-    MFD_infer_type: str,
-    MFR_enc_infer_type: str,
-    MFR_dec_infer_type: str,
-    OCR_det_infer_type: str,
-    OCR_rec_infer_type: str,
-    Table_infer_type: str,
-    Lang_infer_type: str,
-    Page_infer_type: str,
-    nstreams=8,
     return_md = False,
     return_json = False,
+    return_layout = False,
+    return_span = False,
     output_dir = "./outputs",
     input_name = None,
 ):
-    start_page_id = 0
-    end_page_id = None
     ocr = False
-    # proc
+
+    if output_dir is None:
+        image_writer = None
+        md_writer = None
+        output_md_filename = None
+        image_output_dir = "./images"
+        return_span = False
+        return_layout = False
+    else:
+        if input_name is None:
+            random_uuid = uuid.uuid4()
+            input_name = f"{random_uuid}"
+        output_data_dir = f"{output_dir}/{input_name}"
+        image_output_dir = f"{output_data_dir}/images"
+        image_writer = FileBasedDataWriter(image_output_dir)
+        os.makedirs(image_output_dir, exist_ok=True)
+        md_writer = FileBasedDataWriter(output_dir)
+        output_md_filename = f"{output_data_dir}/{input_name}.md"
+
     ## Create Dataset Instance
-    t0 = time.perf_counter()
-    start_time = t0
     dataset = PymuDocDataset(pdf_bytes)
 
     if dataset.classify() == SupportedPdfParseMethod.OCR:
@@ -431,9 +443,9 @@ def doc_analyze_direct(
     else :
         ocr=False
 
+    start_page_id = 0
     end_page_id =  len(dataset) - 1
-
-    MIN_BATCH_INFERENCE_SIZE = int(os.environ.get('MINERU_MIN_BATCH_INFERENCE_SIZE', 200))
+    MIN_BATCH_INFERENCE_SIZE = int(os.environ.get('MINERU_MIN_BATCH_INFERENCE_SIZE', 100))
     images = []
     page_wh_list = []
     for index in range(len(dataset)):
@@ -478,28 +490,19 @@ def doc_analyze_direct(
     ### get model inference result
     # model_inference_result = infer_result.get_infer_res()
 
-    if output_dir is None:
-        image_writer = None
-        md_writer = None
-        output_md_filename = None
-        image_output_dir = "./"
-    else:
-        if input_name is None:
-            random_uuid = uuid.uuid4()
-            input_name = f"{random_uuid}"
-        image_output_dir = f"{output_dir}/{input_name}/images"
-        image_writer = FileBasedDataWriter(image_output_dir)
-        os.makedirs(image_output_dir, exist_ok=True)
-        md_writer = FileBasedDataWriter(output_dir)
-        output_md_filename = f"{output_dir}/{input_name}.md"
-
     if ocr :
         pipe_result = infer_result.pipe_ocr_mode(image_writer)
     else :
         pipe_result = infer_result.pipe_txt_mode(image_writer)
 
     if md_writer:
-        pipe_result.dump_md(md_writer, output_md_filename, f"{input_name}/images",)
+        pipe_result.dump_md(md_writer, output_md_filename, f"images",)
+
+    if return_layout :
+        pipe_result.draw_layout(os.path.join(output_dir, f"{output_data_dir}/{input_name}_layout.pdf"))
+
+    if return_span :
+        pipe_result.draw_span(os.path.join(output_dir, f"{output_data_dir}/{input_name}_spans.pdf"))
 
     if return_md:
         md_content = pipe_result.get_markdown(output_dir)
@@ -513,3 +516,227 @@ def doc_analyze_direct(
         content_list_content = None
 
     return md_content, content_list_content, all_page_info, output_md_filename
+
+def doc_analyze_direct_1(
+    pdf_bytes: bytes,
+    pdf_model: BatchAnalyze,
+    return_md = False,
+    return_json = False,
+    return_layout = False,
+    return_span = False,
+    output_dir = "./outputs",
+    input_name = None,
+):
+    start_page_id = 0
+    ocr = False
+    md_content = ""
+    content_list_content = ""
+
+    if output_dir is None:
+        image_writer = None
+        md_writer = None
+        output_md_filename = None
+        image_output_dir = "./images"
+        return_span = False
+        return_layout = False
+    else:
+        if input_name is None:
+            random_uuid = uuid.uuid4()
+            input_name = f"{random_uuid}"
+        output_data_dir = f"{output_dir}/{input_name}"
+        image_output_dir = f"{output_data_dir}/images"
+        image_writer = FileBasedDataWriter(image_output_dir)
+        os.makedirs(image_output_dir, exist_ok=True)
+        md_writer = FileBasedDataWriter(output_dir)
+        output_md_filename = f"{output_data_dir}/{input_name}.md"
+
+    ## Create Dataset Instance
+    dataset = PymuDocDataset(pdf_bytes)
+
+    if dataset.classify() == SupportedPdfParseMethod.OCR:
+        ocr=True
+    else :
+        ocr=False
+
+    end_page_id =  len(dataset) - 1
+    end_page_id = 1
+    
+    step = 1
+    total_pages = len(dataset)
+    # total_pages = 2
+    for start_page_id in range(0, total_pages, step):
+        images = []
+        page_wh_list = []
+        end_page_id = min(start_page_id + step, total_pages)
+        for index in range(start_page_id, end_page_id):
+            page_data = dataset.get_page(index)
+            img_dict = page_data.get_image()
+            images.append(img_dict['img'])
+            page_wh_list.append((img_dict['width'], img_dict['height']))
+
+        images_with_extra_info = [(images[index], ocr, dataset._lang) for index in range(len(images))]
+
+        results= doc_analyze_pages(pdf_model, images_with_extra_info)
+
+        model_json = []
+        # all_page_info = []
+        for index in range(end_page_id):
+            if index >= start_page_id:
+                result = results.pop(0)
+                page_width, page_height = page_wh_list.pop(0)
+            else :
+                result = []
+                page_height = 0
+                page_width = 0
+            page_info = {'page_no': index, 'width': page_width, 'height': page_height}
+            page_dict = {'layout_dets': result, 'page_info': page_info}
+            # all_page_info.append(page_info)
+            model_json.append(page_dict)
+
+        from magic_pdf.operators.models import InferenceResult
+        infer_result = InferenceResult(model_json, dataset)
+
+        if ocr :
+            pipe_result = infer_result.pipe_ocr_mode(image_writer, start_page_id=start_page_id, end_page_id=end_page_id-1)
+        else :
+            pipe_result = infer_result.pipe_txt_mode(image_writer, start_page_id=start_page_id, end_page_id=end_page_id-1)
+
+        if md_writer:
+            pipe_result.dump_md(md_writer, f"{output_data_dir}/{start_page_id}.md", f"images",)
+
+        if return_layout :
+            pipe_result.draw_layout(os.path.join(output_dir, f"{output_data_dir}/{start_page_id}_layout.pdf"))
+
+        if return_span :
+            pipe_result.draw_span(os.path.join(output_dir, f"{output_data_dir}/{start_page_id}_spans.pdf"))
+
+        if return_md:
+            md_content += pipe_result.get_markdown(output_dir)
+
+        ### get content list content
+        if return_json :
+            content_list_content += pipe_result.get_content_list(output_dir)
+
+    return md_content, content_list_content, [], output_md_filename
+
+def merge_md(total_pages, step, input_dir: str,output_file: str,):
+    with open(output_file, "w", encoding="utf-8") as out:
+        for start_page_id in range(0, total_pages, step):
+            md_file = f"{input_dir}/{start_page_id}.md"
+            with open(md_file, "r", encoding="utf-8") as md:
+                out.write(md.read())
+            out.write("\n")
+
+def doc_analyze_direct_2(
+    pdf_bytes: bytes,
+    pdf_model: BatchAnalyze,
+    return_md = False,
+    return_json = False,
+    return_layout = False,
+    return_span = False,
+    output_dir = "./outputs",
+    input_name = None,
+):
+    ocr = False
+    md_content = ""
+    content_list_content = ""
+    if output_dir is None:
+        image_writer = None
+        md_writer = None
+        output_md_filename = None
+        image_output_dir = "./images"
+        return_span = False
+        return_layout = False
+    else:
+        if input_name is None:
+            random_uuid = uuid.uuid4()
+            input_name = f"{random_uuid}"
+        output_data_dir = f"{output_dir}/{input_name}"
+        image_output_dir = f"{output_data_dir}/images"
+        image_writer = FileBasedDataWriter(image_output_dir)
+        os.makedirs(image_output_dir, exist_ok=True)
+        md_writer = FileBasedDataWriter(output_dir)
+        output_md_filename = f"{output_data_dir}/{input_name}.md"
+
+    ## Create Dataset Instance
+    dataset = PymuDocDataset(pdf_bytes)
+
+    if dataset.classify() == SupportedPdfParseMethod.OCR:
+        ocr=True
+    else :
+        ocr=False
+    
+    step = 1
+    total_pages = len(dataset)
+    # total_pages = 2
+    for start_page_id in range(0, total_pages, step):
+        images_with_extra_info = []
+        page_info_list =[]
+        end_page_id = min(start_page_id + step, total_pages)
+        for index in range(start_page_id, end_page_id):
+            page_data = dataset.get_page(index)
+            img_dict = page_data.get_image()
+            images_with_extra_info.append((img_dict['img'], ocr, dataset._lang))
+            page_info_list.append({'page_no': index, 'width': img_dict['width'], 'height': img_dict['height']})
+
+        results= doc_analyze_pages(pdf_model, images_with_extra_info)
+
+        model_json = []
+        for index in range(total_pages):
+            if index >= start_page_id and index < end_page_id:
+                result = results.pop(0)
+                page_info = page_info_list.pop(0)
+            else :
+                result = []
+                page_info = {'page_no': index, 'width': 0, 'height': 0}
+            page_dict = {'layout_dets': result, 'page_info': page_info}
+            model_json.append(page_dict)
+
+        infer_result = InferenceResult(model_json, dataset)
+
+        if ocr :
+            pipe_result = infer_result.pipe_ocr_mode(image_writer, start_page_id=start_page_id, end_page_id=end_page_id-1)
+        else :
+            pipe_result = infer_result.pipe_txt_mode(image_writer, start_page_id=start_page_id, end_page_id=end_page_id-1)
+
+        if md_writer:
+            pipe_result.dump_md(md_writer, f"{output_data_dir}/{start_page_id}.md", f"images",)
+
+        if return_layout :
+            pipe_result.draw_layout(os.path.join(output_dir, f"{output_data_dir}/{input_name}_{start_page_id}_layout.pdf"))
+
+        if return_span :
+            pipe_result.draw_span(os.path.join(output_dir, f"{output_data_dir}/{input_name}_{start_page_id}_spans.pdf"))
+
+        if return_md:
+            md_content += pipe_result.get_markdown(output_dir)
+
+        ### get content list content
+        if return_json :
+            content_list_content += pipe_result.get_content_list(output_dir)
+
+    print(f"Total pages: {total_pages}, step: {step}, output_data_dir: {output_data_dir}, output_md_filename: {output_md_filename}")
+    if output_md_filename is not None:
+        merge_md(total_pages, step, output_data_dir, output_md_filename)
+    return md_content, content_list_content, None, output_md_filename
+
+def doc_analyze_direct(
+    pdf_bytes: bytes,
+    pdf_model: BatchAnalyze,
+    return_md = False,
+    return_json = False,
+    return_layout = False,
+    return_span = False,
+    output_dir = "./outputs",
+    input_name = None,
+):
+    return doc_analyze_direct_0(
+        pdf_bytes=pdf_bytes,
+        pdf_model=pdf_model,
+        return_md=return_md,
+        return_json=return_json,
+        return_layout=return_layout,
+        return_span=return_span,
+        output_dir=output_dir,
+        input_name=input_name,
+    )

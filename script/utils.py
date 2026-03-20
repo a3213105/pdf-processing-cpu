@@ -38,6 +38,10 @@ def parse_args() -> argparse.Namespace:
                         help='enable json output (set return_json=True)')
     parser.add_argument('--return_md', '-m', action='store_true', default=False,
                         help='enable markdown output (set return_md=True)')
+    parser.add_argument('--return_layout', '-l', action='store_true', default=False,
+                        help='enable layout output (set return_layout=True)')
+    parser.add_argument('--return_span', '-s', action='store_true', default=False,
+                        help='enable span output (set return_span=True)')
     return parser.parse_args()
 
 args = parse_args()
@@ -138,32 +142,3 @@ def load_pdf_file(file_path):
     with open(file_path, 'rb') as f:
         f.seek(0)
         return f.read()
-
-def process_pdf_file(args, pdf_instance) :
-    if args.input is None :
-        print(f"app mode need set input")
-        exit(0)
-    elif isinstance(args.input, str) :
-        args.input = [args.input]
-    output_md_list = []
-    for input_name in args.input:
-        if os.path.isdir(input_name) :  
-            for root, dirs, files in os.walk(input_name):
-                for input_name in files:
-                    if input_name.lower().endswith("pdf"):
-                        full_path = os.path.join(root, input_name)
-                        pdf_raw = load_pdf_file(full_path)
-                        (md_raw, json_raw, page_info, output_md_filename) = pdf_instance.process_pdf(pdf_raw, args.return_md, args.return_json, args.output_dir, Path(input_name).stem)
-                        output_md_list.append((input_name, output_md_filename, md_raw, json_raw, page_info))
-        elif os.path.isfile(input_name):
-            pdf_raw = load_pdf_file(input_name)
-            (md_raw, json_raw, page_info, output_md_filename) = pdf_instance.process_pdf(pdf_raw, args.return_md, args.return_json, args.output_dir, Path(input_name).stem)
-            # print(f"### process file {input_name} done")
-            # print(f"### markdown output ({args.return_md}):\n{md_raw}")
-            # print(f"### json output ({args.return_json}):\n{json_raw}")
-            # print(f"### page info:\n{page_info}")
-            # print(f"### markdown file saved at: {output_md_filename}")
-            output_md_list.append((input_name, output_md_filename, md_raw, json_raw, page_info))
-        else :
-            print(f"app mode need set input")
-    return output_md_list

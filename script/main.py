@@ -8,14 +8,13 @@ from utils import parse_args
 
 
 def main(args, pdf_instance):
-    output_md_list = process_pdf_file(args, pdf_instance)
+    output_md_list = process_pdf_file(pdf_instance, args.input, args.return_md, args.return_json, args.return_layout, args.return_span, args.output_dir)
     outputs = []
     output_info = f"Processed {len(output_md_list)} PDF files successfully."
     for input_name, output_md_filename, *_ in output_md_list:
         outputs.append({
             "input_name": str(input_name),
             "output_path": str(output_md_filename),
-            # "page_info": page_info,
             })
 
     return json.dumps({
@@ -25,7 +24,7 @@ def main(args, pdf_instance):
             }, ensure_ascii=False, default=str)
 
 if __name__ == '__main__':
-    try :
+    # try :
         args = parse_args()
         if args.all is not None :
             args.all = args.all.lower()
@@ -57,10 +56,10 @@ if __name__ == '__main__':
             }])
         else :
             output_json_str = main(args, pdf_instance)
-    except Exception as e:
-        output_json_str = json.dumps([{
-            "success": False,
-            "message": str(e),
-            "outputs": [],
-        }])
-    print(output_json_str)
+    # except Exception as e:
+    #     output_json_str = json.dumps([{
+    #         "success": False,
+    #         "message": str(e),
+    #         "outputs": [],
+    #     }])
+    # print(output_json_str)

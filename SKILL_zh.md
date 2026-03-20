@@ -1,6 +1,6 @@
 ---
-name: pdf-processing-cpu
-description: 基于本地 MinerU 的 PDF 文档解析工具，支持将 PDF 转换为 Markdown / JSON。
+name: pdf-processing-cpu (Intel® Xeon® Optimized)
+description: 基于 Intel® Xeon® AMX 指令集优化加速的本地化 MinerU PDF 文档解析工具，支持将 PDF 转换为 Markdown。
 ---
 
 ## 工具列表

@@ -248,7 +248,6 @@ def get_pdf_text_layout_per_page(doc: fitz.Document):
                         #             # line_text = ' '.join(span['text'] for span in line['spans'])
                         #             # print('This line is vertical:', line_text)
                         #             vertical_count += 1
-        # print(f"page_id: {page_id}, vertical_count: {vertical_count}, horizontal_count: {horizontal_count}")
         # 判断每一页的文本布局
         if vertical_count == 0 and horizontal_count == 0:  # 该页没有文本，无法判断
             text_layout_list.append('unknow')
@@ -382,4 +381,3 @@ if __name__ == '__main__':
     # file_content = read_file("D:\project/20231108code-clean\pdf_cost_time\竖排例子\净空法师_大乘无量寿.pdf","")
     # doc = fitz.open("pdf", file_content)
     # text_layout_lst = get_pdf_text_layout_per_page(doc)
-    # print(text_layout_lst)

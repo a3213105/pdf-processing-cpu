@@ -30,12 +30,10 @@ class DocLayoutYOLOModel(object):
             self.model.predictor = (self.model._smart_load("predictor"))(overrides=args)
             self.model.predictor.setup_model(model=self.model.model, verbose=False)
             def infer(*args):
-                # print(f"DocLayoutYOLOModel: args={args[0].shape}")
                 result = self.ov_yolo(args)
                 return torch.from_numpy(result[0])
             self.model.predictor.inference = infer
             # self.model.predictor.model.pt = False
-            # print(f"### load DocLayoutYOLO Openvino model from {self.ov_file_name}, infer_type={self.infer_type}")                
         else :
             self.ov_yolo = None
 

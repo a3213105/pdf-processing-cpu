@@ -41,36 +41,28 @@ class PDF_Instance :
                         self.mfr_dec_type, self.ocr_det_type, self.ocr_rec_type, self.table_type,
                         self.lang_type, self.page_type, self.nstreams, True)
 
-    def process_pdf(self, pdf_raw: bytes, return_md, return_json, output_dir: str, input_name: str = None) :
-        return doc_analyze_direct(pdf_raw, self.pdf_model, self.enable_ov, self.layout_type, self.mfd_type,
-                                  self.mfr_enc_type, self.mfr_dec_type, self.ocr_det_type,
-                                  self.ocr_rec_type, self.table_type, self.lang_type, self.page_type,
-                                  self.nstreams, return_md, return_json, output_dir, input_name)
+    def process_pdf(self, pdf_raw: bytes, return_md, return_json, return_layout, return_span, output_dir: str, input_name: str = None) :
+        return doc_analyze_direct(pdf_raw, self.pdf_model, return_md, return_json, return_layout, return_span, output_dir, input_name)
 
-def process_pdf_file(args, pdf_instance) :
-    if args.input is None :
+def process_pdf_file(pdf_instance, input: str, return_md, return_json, return_layout, return_span, output_dir: str) :
+    if input is None :
         print(f"app mode need set input")
         exit(0)
-    elif isinstance(args.input, str) :
-        args.input = [args.input]
+    elif isinstance(input, str) :
+        input = [input]
     output_md_list = []
-    for input_name in args.input:
+    for input_name in input:
         if os.path.isdir(input_name) :  
             for root, dirs, files in os.walk(input_name):
                 for input_name in files:
                     if input_name.lower().endswith("pdf"):
                         full_path = os.path.join(root, input_name)
                         pdf_raw = load_pdf_file(full_path)
-                        (md_raw, json_raw, page_info, output_md_filename) = pdf_instance.process_pdf(pdf_raw, args.return_md, args.return_json, args.output_dir, Path(input_name).stem)
+                        (md_raw, json_raw, page_info, output_md_filename) = pdf_instance.process_pdf(pdf_raw, return_md, return_json, return_layout, return_span, output_dir, Path(input_name).stem)
                         output_md_list.append((input_name, output_md_filename, md_raw, json_raw, page_info))
         elif os.path.isfile(input_name):
             pdf_raw = load_pdf_file(input_name)
-            (md_raw, json_raw, page_info, output_md_filename) = pdf_instance.process_pdf(pdf_raw, args.return_md, args.return_json, args.output_dir, Path(input_name).stem)
-            # print(f"### process file {input_name} done")
-            # print(f"### markdown output ({args.return_md}):\n{md_raw}")
-            # print(f"### json output ({args.return_json}):\n{json_raw}")
-            # print(f"### page info:\n{page_info}")
-            # print(f"### markdown file saved at: {output_md_filename}")
+            (md_raw, json_raw, page_info, output_md_filename) = pdf_instance.process_pdf(pdf_raw, return_md, return_json, return_layout, return_span, output_dir, Path(input_name).stem)
             output_md_list.append((input_name, output_md_filename, md_raw, json_raw, page_info))
         else :
             print(f"app mode need set input")

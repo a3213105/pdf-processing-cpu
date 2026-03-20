@@ -147,8 +147,6 @@ class TextDetector(BaseOCRV20):
                 self.ov_det = PaddleTextDetector(self.ov_file_name)
                 self.ov_det.setup_model(stream_num = 1, infer_type=self.infer_type,) 
                                         # shape_dynamic=[1, self.rec_image_shape[1], -1, self.rec_image_shape[0]])
-                # print(f"### load OCR-Det_ov model {self.ov_file_name}, infer_type={self.infer_type}, ",
-                #     f"det_algorithm={self.det_algorithm}")
         else:
             self.load_pytorch_weights(self.weights_path)
             self.net.eval()
@@ -218,7 +216,6 @@ class TextDetector(BaseOCRV20):
         img = np.expand_dims(img, axis=0)
         shape_list = np.expand_dims(shape_list, axis=0)
         img = img.copy()
-        # print(f"OCR-DET img={img.shape}")
         if self.ov_det :
             result = self.ov_det([img])
             result = torch.from_numpy(result)
