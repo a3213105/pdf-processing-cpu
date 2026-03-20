@@ -24,7 +24,7 @@ def main(args, pdf_instance):
             }, ensure_ascii=False, default=str)
 
 if __name__ == '__main__':
-    # try :
+    try :
         args = parse_args()
         if args.all is not None :
             args.all = args.all.lower()
@@ -56,10 +56,10 @@ if __name__ == '__main__':
             }])
         else :
             output_json_str = main(args, pdf_instance)
-    # except Exception as e:
-    #     output_json_str = json.dumps([{
-    #         "success": False,
-    #         "message": str(e),
-    #         "outputs": [],
-    #     }])
-    # print(output_json_str)
+    except Exception as e:
+        output_json_str = json.dumps([{
+            "success": False,
+            "message": str(e),
+            "outputs": [],
+        }])
+    print(output_json_str)
