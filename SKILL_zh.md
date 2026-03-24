@@ -76,8 +76,9 @@ python $HOME/.openclaw/workspace/skills/pdf-processing-cpu/script/main.py -v
 - **Python 版本**：3.10-3.13
 - **操作系统**：Linux
 - **内存**：
-  - 最低 16GB，推荐 32GB+
-- **磁盘空间**：最低 20GB（推荐 SSD）
+  - 最低 2GB，推荐 16GB+
+- **磁盘空间**：最低 4GB（推荐 SSD）
+- **CPU**：Intel® Xeon® 4代以上CPU，带AMX可以提供更优性能
 
 ## 使用场景
 

@@ -75,8 +75,9 @@ python $HOME/.openclaw/workspace/skills/pdf-processing-cpu/script/main.py -v
 - **Python Version**: 3.10-3.13
 - **Operating System**: Linux
 - **Memory**:
-  - minimum 16GB, recommended 32GB+
-- **Disk Space**: minimum 20GB (SSD recommended)
+  - minimum 2GB, recommended 16GB+
+- **Disk Space**: minimum 4GB (SSD recommended)
+- **CPU**：Intel® Xeon® 4th Gen and later CPUs with AMX deliver superior performance.
 
 ## Use Cases
 
