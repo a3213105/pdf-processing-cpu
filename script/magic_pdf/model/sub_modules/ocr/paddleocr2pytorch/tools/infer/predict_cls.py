@@ -57,15 +57,15 @@ class TextClassifier(BaseOCRV20):
                 try :
                     ov_model = ov.convert_model(self.net, example_input=torch.randn(1, 3, 960, 960))
                     ov.save_model(ov_model, self.ov_file_name, compress_to_fp16=False)
-                    print(f"export ov model to {self.ov_file_name} ")
+                    print(f"✅export ov model to {self.ov_file_name} ")
                 except Exception as e:
                     print(f"### convert_model failed: {e}, try simple convert_model")
             if os.path.isfile(self.ov_file_name):
                 self.ov_cls = PaddleTextDetector(self.ov_file_name)
                 self.ov_cls.setup_model(stream_num = 1, infer_type=self.infer_type,) 
                                         # shape_dynamic=[1, self.rec_image_shape[1], -1, self.rec_image_shape[0]])
-                print(f"### load OCR-Cls_ov model {self.ov_file_name}, infer_type={self.infer_type}, ",
-                    f"det_algorithm={self.det_algorithm}")
+                # print(f"### load OCR-Cls_ov model {self.ov_file_name}, infer_type={self.infer_type}, ",
+                #     f"det_algorithm={self.det_algorithm}")
         else :
             self.load_pytorch_weights(self.weights_path)
             self.net.eval()

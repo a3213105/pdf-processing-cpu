@@ -123,7 +123,7 @@ class TextRecognizer(BaseOCRV20):
                     import openvino as ov
                     ov_model = ov.convert_model(self.net, example_input=torch.randn(1, 3, 48, 320))
                     ov.save_model(ov_model, self.ov_file_name, compress_to_fp16=False)
-                    print(f"export ov model to {self.ov_file_name} ")
+                    print(f"✅ export ov model to {self.ov_file_name} ")
                 except Exception as e:
                     print(f"### convert_model failed: {e}, try simple convert_model")
             if os.path.isfile(self.ov_file_name):

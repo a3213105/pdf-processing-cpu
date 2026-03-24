@@ -180,6 +180,19 @@ class AtomModelSingleton:
 
         if atom_model_name in [AtomicModel.OCR]:
             key = (atom_model_name, lang)
+            if key not in self._models:
+                self._models[key] = atom_model_init(model_name=atom_model_name, **kwargs)
+            return self._models[key]
+        else :
+            return atom_model_init(model_name=atom_model_name, **kwargs)
+    
+    def get_atom_model_map(self, atom_model_name: str, **kwargs):
+        lang = kwargs.get('lang', None)
+        layout_model_name = kwargs.get('layout_model_name', None)
+        table_model_name = kwargs.get('table_model_name', None)
+
+        if atom_model_name in [AtomicModel.OCR]:
+            key = (atom_model_name, lang)
         elif atom_model_name in [AtomicModel.Layout]:
             key = (atom_model_name, layout_model_name)
         elif atom_model_name in [AtomicModel.Table]:

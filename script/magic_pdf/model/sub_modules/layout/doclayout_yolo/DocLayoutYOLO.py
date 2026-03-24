@@ -10,6 +10,7 @@ class DocLayoutYOLOModel(object):
         file_name = os.path.basename(weight)
         file_name_without_extension = os.path.splitext(file_name)[0]
         self.ov_file_name = f"{weight}/{file_name_without_extension}.xml".replace(".pt", "_openvino_model")
+        self.model = None
         try :
             if self.enable_ov:
                 self.model = YOLOv10(f"{weight}".replace(".pt", "_openvino_model"), task="detect", verbose=False)
@@ -22,7 +23,7 @@ class DocLayoutYOLOModel(object):
         if self.enable_ov:
             if not os.path.isfile(self.ov_file_name) :
                     path = self.model.export(format="openvino", dynamic=True)  
-                    print(f"### export YOLOv10 from {weight} to {path}, ov_file={self.ov_file_name}")
+                    print(f"###✅ export YOLOv10 from {weight} to {path}, ov_file={self.ov_file_name}")
             self.ov_yolo = YoloProcessor(self.ov_file_name)
             self.ov_yolo.setup_model(stream_num = 1, infer_type=self.infer_type)
             args={'task': 'detect', 'imgsz': 1280, 'conf': 0.10, 'iou': 0.45, 'batch': 1, 'mode': 'predict',

@@ -46,9 +46,7 @@ class ModelSingleton:
         formula_enable=None,
         table_enable=None,
     ):
-        key = (ocr, show_log, lang, layout_model, formula_enable, table_enable)
-        if key not in self._models:
-            self._models[key] = custom_model_init(
+        return custom_model_init(
                 enable_ov=enable_ov,
                 Layout_infer_type=Layout_infer_type,
                 MFD_infer_type=MFD_infer_type,
@@ -67,7 +65,28 @@ class ModelSingleton:
                 formula_enable=formula_enable,
                 table_enable=table_enable,
             )
-        return self._models[key]
+        # key = (ocr, show_log, lang, layout_model, formula_enable, table_enable)
+        # if key not in self._models:
+        #     self._models[key] = custom_model_init(
+        #         enable_ov=enable_ov,
+        #         Layout_infer_type=Layout_infer_type,
+        #         MFD_infer_type=MFD_infer_type,
+        #         MFR_enc_infer_type=MFR_enc_infer_type,
+        #         MFR_dec_infer_type=MFR_dec_infer_type,
+        #         OCR_det_infer_type=OCR_det_infer_type,
+        #         OCR_rec_infer_type=OCR_rec_infer_type,
+        #         Table_infer_type=Table_infer_type,
+        #         Lang_infer_type=Lang_infer_type,
+        #         Page_infer_type=Page_infer_type,
+        #         nstreams=nstreams,
+        #         ocr=ocr,
+        #         show_log=show_log,
+        #         lang=lang,
+        #         layout_model=layout_model,
+        #         formula_enable=formula_enable,
+        #         table_enable=table_enable,
+        #     )
+        # return self._models[key]
 
 
 def custom_model_init(
@@ -91,16 +110,12 @@ def custom_model_init(
 ):
     model = None
     if model_config.__model_mode__ == 'lite':
-        # logger.warning(
-        #     'The Lite mode is provided for developers to conduct testing only, and the output quality is '
-        #     'not guaranteed to be reliable.'
-        # )
         model = MODEL.Paddle
     elif model_config.__model_mode__ == 'full':
         model = MODEL.PEK
 
     if model_config.__use_inside_model__:
-        model_init_start = time.time()
+        # model_init_start = time.time()
         if model == MODEL.Paddle:
             from magic_pdf.model.pp_structure_v2 import CustomPaddleModel
 
@@ -150,7 +165,7 @@ def custom_model_init(
             # logger.error('Not allow model_name!')
             print('Not allow model_name!')
             exit(1)
-        model_init_cost = time.time() - model_init_start
+        # model_init_cost = time.time() - model_init_start
         # logger.info(f'model init cost: {model_init_cost}')
     else:
         # logger.error('use_inside_model is False, not allow to use inside model')
@@ -432,7 +447,7 @@ def doc_analyze_direct_0(
         image_output_dir = f"{output_data_dir}/images"
         image_writer = FileBasedDataWriter(image_output_dir)
         os.makedirs(image_output_dir, exist_ok=True)
-        md_writer = FileBasedDataWriter(output_dir)
+        md_writer = FileBasedDataWriter(output_data_dir)
         output_md_filename = f"{output_data_dir}/{input_name}.md"
 
     ## Create Dataset Instance
@@ -491,12 +506,12 @@ def doc_analyze_direct_0(
     # model_inference_result = infer_result.get_infer_res()
 
     if ocr :
-        pipe_result = infer_result.pipe_ocr_mode(image_writer)
+        pipe_result = infer_result.pipe_ocr_mode(image_writer, pdf_model.enable_ov, pdf_model.Page_infer_type)
     else :
-        pipe_result = infer_result.pipe_txt_mode(image_writer)
+        pipe_result = infer_result.pipe_txt_mode(image_writer, pdf_model.enable_ov, pdf_model.Page_infer_type)
 
     if md_writer:
-        pipe_result.dump_md(md_writer, output_md_filename, f"images",)
+        pipe_result.dump_md(md_writer, f"{input_name}.md", f"images",)
 
     if return_layout :
         pipe_result.draw_layout(os.path.join(output_dir, f"{output_data_dir}/{input_name}_layout.pdf"))
@@ -597,9 +612,9 @@ def doc_analyze_direct_1(
         infer_result = InferenceResult(model_json, dataset)
 
         if ocr :
-            pipe_result = infer_result.pipe_ocr_mode(image_writer, start_page_id=start_page_id, end_page_id=end_page_id-1)
+            pipe_result = infer_result.pipe_ocr_mode(image_writer, pdf_model.enable_ov, pdf_model.Page_infer_type, start_page_id=start_page_id, end_page_id=end_page_id-1)
         else :
-            pipe_result = infer_result.pipe_txt_mode(image_writer, start_page_id=start_page_id, end_page_id=end_page_id-1)
+            pipe_result = infer_result.pipe_txt_mode(image_writer, pdf_model.enable_ov, pdf_model.Page_infer_type, start_page_id=start_page_id, end_page_id=end_page_id-1)
 
         if md_writer:
             pipe_result.dump_md(md_writer, f"{output_data_dir}/{start_page_id}.md", f"images",)
@@ -695,9 +710,9 @@ def doc_analyze_direct_2(
         infer_result = InferenceResult(model_json, dataset)
 
         if ocr :
-            pipe_result = infer_result.pipe_ocr_mode(image_writer, start_page_id=start_page_id, end_page_id=end_page_id-1)
+            pipe_result = infer_result.pipe_ocr_mode(image_writer, pdf_model.enable_ov, pdf_model.Page_infer_type, start_page_id=start_page_id, end_page_id=end_page_id-1)
         else :
-            pipe_result = infer_result.pipe_txt_mode(image_writer, start_page_id=start_page_id, end_page_id=end_page_id-1)
+            pipe_result = infer_result.pipe_txt_mode(image_writer, pdf_model.enable_ov, pdf_model.Page_infer_type, start_page_id=start_page_id, end_page_id=end_page_id-1)
 
         if md_writer:
             pipe_result.dump_md(md_writer, f"{output_data_dir}/{start_page_id}.md", f"images",)

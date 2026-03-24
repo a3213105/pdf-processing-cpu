@@ -62,6 +62,8 @@ class InferenceResultBase(ABC):
     def pipe_txt_mode(
         self,
         imageWriter: DataWriter,
+        enable_ov,
+        Page_infer_type,
         start_page_id=0,
         end_page_id=None,
         debug_mode=False,
@@ -86,6 +88,8 @@ class InferenceResultBase(ABC):
     def pipe_ocr_mode(
         self,
         imageWriter: DataWriter,
+        enable_ov,
+        Page_infer_type,
         start_page_id=0,
         end_page_id=None,
         debug_mode=False,

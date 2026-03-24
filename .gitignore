@@ -2,3 +2,6 @@
 *.zip
 models/
 release.sh
+*.tgz
+*.gz
+outputs/

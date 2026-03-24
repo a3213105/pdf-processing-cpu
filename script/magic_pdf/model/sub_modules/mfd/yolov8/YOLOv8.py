@@ -26,7 +26,7 @@ class YOLOv8MFDModel(object):
         if self.enable_ov:
             if not os.path.isfile(self.ov_file_name) :
                     path = self.mfd_model.export(format="openvino", dynamic=True, simplify=False, device="CPU")  
-                    print(f"### export YOLO from {weight} to {path}, ov_file={self.ov_file_name}")
+                    print(f"###✅ export YOLO from {weight} to {path}, ov_file={self.ov_file_name}")
             self.ov_yolo = YoloProcessor(self.ov_file_name)
             self.ov_yolo.setup_model(stream_num = 1, infer_type=self.infer_type)
             args={'task': 'detect', 'imgsz': 1888, 'conf': 0.25, 'iou': 0.45, 'batch': 1, 'mode': 'predict',

@@ -24,7 +24,7 @@ class RapidTableModel(object):
             if torch.cuda.is_available() and table_sub_model_name == "unitable":
                 input_args = RapidTableInput(model_type=table_sub_model_name, use_cuda=True, device=get_device())
             else:
-                root_dir = Path(__file__).absolute().parent.parent.parent.parent.parent
+                # root_dir = Path(__file__).absolute().parent.parent.parent.parent.parent
                 slanet_plus_model_path = os.path.join(model_path, 'slanet_plus', 'slanet-plus.onnx')
                 input_args = RapidTableInput(model_type=table_sub_model_name, model_path=slanet_plus_model_path)
         else:

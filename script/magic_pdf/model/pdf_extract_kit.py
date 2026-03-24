@@ -70,17 +70,6 @@ class CustomPEKModel:
         self.apply_ocr = ocr
         self.lang = kwargs.get('lang', None)
 
-        # logger.info(
-        #     'DocAnalysis init, this may take some times, layout_model: {}, apply_formula: {}, apply_ocr: {}, '
-        #     'apply_table: {}, table_model: {}, lang: {}'.format(
-        #         self.layout_model_name,
-        #         self.apply_formula,
-        #         self.apply_ocr,
-        #         self.apply_table,
-        #         self.table_model_name,
-        #         self.lang,
-        #     )
-        # )
         # 初始化解析方案
         self.device = kwargs.get('device', 'cpu')
 

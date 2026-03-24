@@ -1,6 +1,7 @@
 import time
 import cv2
- 
+import yaml
+import os
 from tqdm import tqdm
 import torch
 from magic_pdf.config.constants import MODEL_NAME
@@ -9,6 +10,7 @@ from magic_pdf.model.sub_modules.model_utils import (
     clean_vram,crop_img,get_res_list_from_layout_res)
 from magic_pdf.model.sub_modules.ocr.paddleocr2pytorch.ocr_utils import (
     get_adjusted_mfdetrec_res,get_ocr_result_list)
+from magic_pdf.libs.config_reader import get_local_models_dir
 
 YOLO_LAYOUT_BASE_BATCH_SIZE = 1
 MFD_BASE_BATCH_SIZE = 1
@@ -16,11 +18,11 @@ MFR_BASE_BATCH_SIZE = 16
 
 
 class BatchAnalyze:
-    def __init__(self,model_manager,enable_ov: bool,Layout_infer_type: str,
-        MFD_infer_type: str,MFR_enc_infer_type: str,MFR_dec_infer_type: str,
-        OCR_det_infer_type: str,OCR_rec_infer_type: str,Table_infer_type: str,
-        Lang_infer_type: str,Page_infer_type: str,nstreams: int,batch_ratio: int,
-        show_log,layout_model,formula_enable,table_enable):
+    def __init__(self, model_manager, enable_ov: bool, Layout_infer_type: str,
+        MFD_infer_type: str, MFR_enc_infer_type: str, MFR_dec_infer_type: str,
+        OCR_det_infer_type: str, OCR_rec_infer_type: str, Table_infer_type: str,
+        Lang_infer_type: str, Page_infer_type: str, nstreams: int, batch_ratio: int,
+        show_log, layout_model, formula_enable, table_enable):
         self.model_manager = model_manager
         self.batch_ratio = batch_ratio
         self.show_log = show_log
@@ -38,6 +40,23 @@ class BatchAnalyze:
         self.Lang_infer_type = Lang_infer_type
         self.Page_infer_type = Page_infer_type
         self.nstreams = nstreams
+
+        # 获取当前文件（即 pdf_extract_kit.py）的绝对路径
+        current_file_path = os.path.abspath(__file__)
+        # 获取当前文件所在的目录(model)
+        current_dir = os.path.dirname(current_file_path)
+        # 上一级目录(magic_pdf)
+        root_dir = os.path.dirname(current_dir)
+        # model_config目录
+        model_config_dir = os.path.join(root_dir, 'resources', 'model_config')
+        # 构建 model_configs.yaml 文件的完整路径
+        config_path = os.path.join(model_config_dir, 'model_configs.yaml')
+        with open(config_path, 'r', encoding='utf-8') as f:
+            self.configs = yaml.load(f, Loader=yaml.FullLoader)
+            
+        self.local_models_dir = get_local_models_dir()
+
+
         self.model = self.model_manager.get_model(
                 enable_ov=self.enable_ov,
                 Layout_infer_type=self.Layout_infer_type,
@@ -166,9 +185,7 @@ class BatchAnalyze:
 
                 # OCR-det
                 new_image = cv2.cvtColor(new_image,cv2.COLOR_RGB2BGR)
-                ocr_res = ocr_model.ocr(
-                    new_image,mfd_res=adjusted_mfdetrec_res,rec=False
-                )[0]
+                ocr_res = ocr_model.ocr(new_image,mfd_res=adjusted_mfdetrec_res,rec=False)[0]
 
                 # Integration results
                 if ocr_res:
@@ -200,6 +217,9 @@ class BatchAnalyze:
                     det_db_unclip_ratio=1.6,
                     lang=_lang
                 )
+                table_sub_model_name ='slanet_plus'
+                table_model_name = 'rapid_table'
+                table_model_dir = self.configs['weights'][table_model_name]
                 table_model = atom_model_manager.get_atom_model(
                     enable_ov = self.enable_ov,
                     OCR_det_infer_type = self.OCR_det_infer_type,
@@ -207,12 +227,12 @@ class BatchAnalyze:
                     Table_infer_type = self.Table_infer_type,
                     nstreams = self.nstreams,
                     atom_model_name='table',
-                    table_model_name='rapid_table',
-                    table_model_path='',
+                    table_model_name=table_model_name,
                     table_max_time=400,
                     device='cpu',
                     ocr_engine=ocr_engine,
-                    table_sub_model_name='slanet_plus'
+                    table_sub_model_name=table_sub_model_name,
+                    table_model_path=str(os.path.join(self.local_models_dir, table_model_dir)),
                 )
                 html_code,table_cell_bboxes,logic_points,elapse = table_model.predict(table_res_dict['table_img'])
                 # 判断是否返回正常
@@ -222,16 +242,6 @@ class BatchAnalyze:
                     ) or html_code.strip().endswith('</table>')
                     if expected_ending:
                         table_res_dict['table_res']['html'] = html_code
-                #     else:
-                #         logger.warning(
-                #             'table recognition processing fails,not found expected HTML table end'
-                #         )
-                # else:
-                #     logger.warning(
-                #         'table recognition processing fails,not get html return'
-                #     )
-            # table_stop = time.time()
-            # logger.info(f'table time: {round(table_stop - table_start,2)},image num: {len(table_res_list_all_page)}')
                   
         # Create dictionaries to store items by language
         need_ocr_lists_by_lang = {}  # Dict of lists for each language

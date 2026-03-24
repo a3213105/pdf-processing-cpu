@@ -821,6 +821,8 @@ def pdf_parse_union(
     model_list,
     dataset: Dataset,
     imageWriter,
+    enable_ov,
+    Page_infer_type,
     parse_mode,
     start_page_id=0,
     end_page_id=None,
@@ -848,7 +850,8 @@ def pdf_parse_union(
         end_page_id = len(dataset) - 1
 
     model_manager = AtomModelSingleton()
-    layoutreader_model = model_manager.get_atom_model('layoutreader')
+    layoutreader_model = model_manager.get_atom_model(
+        'layoutreader', enable_ov=enable_ov, Page_infer_type = Page_infer_type,)
     if layoutreader_model.using_ov:
         desc_str = f"Pages_OV_{layoutreader_model.infer_type} Predict"
     else :
