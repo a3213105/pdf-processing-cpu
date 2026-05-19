@@ -16,6 +16,7 @@ def create_app(pdf_instance):
         pdf_raw = None
         md_raw = None
         json_raw = None
+        output_meta = None
         parse_file_name = 'input.pdf'
 
         if request.is_json:
@@ -62,10 +63,23 @@ def create_app(pdf_instance):
 
         try:
             start_time = time.perf_counter()
-            md_raw, json_raw = pdf_instance.process_pdf(pdf_raw, file_name=parse_file_name)
+            md_raw, json_raw, output_meta = pdf_instance.process_pdf(
+                pdf_raw,
+                file_name=parse_file_name,
+                return_output_meta=True,
+            )
             end_time = time.perf_counter()
             latency = end_time - start_time
-            process_info = print_processing_info(parse_file_name, pdf_instance.output_dir, json_raw, md_raw, latency)
+            output_path = output_meta.get("output_dir") if isinstance(output_meta, dict) else pdf_instance.output_dir
+            process_info = print_processing_info(
+                parse_file_name,
+                output_path,
+                json_raw,
+                md_raw,
+                latency,
+                output_meta=output_meta,
+                log_mode="serving",
+            )
             return jsonify(process_info)
             # return jsonify({'json_raw': json_raw, 'md_raw': md_raw, 'latency': latency})
         finally:

@@ -234,7 +234,7 @@ def run_app_benchmark(pdf_instance: PDF_Instance, pdf_files, repeat, warmup, out
             json.dump(summary, f, indent=2, ensure_ascii=False)
         print(f"Saved benchmark summary to: {output_json}")
 
-def print_processing_info(input_name, output_path, json_raw, md_raw, latency, output_meta=None, error=None):
+def print_processing_info(input_name, output_path, json_raw, md_raw, latency, output_meta=None, error=None, log_mode="full"):
     message = f"Processed {input_name}, json_raw={len(json_raw) if json_raw is not None else 'None'}, md_raw={len(md_raw) if md_raw is not None else 'None'}, latency={latency:.6f} seconds"
     if error:
         message = f"{message}, error={error}"
@@ -265,7 +265,11 @@ def print_processing_info(input_name, output_path, json_raw, md_raw, latency, ou
                 output_item
             ]
         }
-    print(json.dumps(info, ensure_ascii=False, indent=2))
+    if log_mode == "serving":
+        file_name = os.path.basename(str(input_name))
+        print(f"Processed {file_name}, latency={latency:.6f} seconds, output_path={output_item.get('output_path')}")
+    else:
+        print(json.dumps(info, ensure_ascii=False, indent=2))
     return info
 
 def run_local_files(pdf_instance: PDF_Instance, pdf_files):

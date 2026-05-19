@@ -14,18 +14,42 @@ import re
 import string
 import time
 from transformers import AutoConfig, AutoTokenizer
-from transformers.audio_utils import make_list_of_audio
 from transformers.configuration_utils import PretrainedConfig
 from transformers.feature_extraction_utils import BatchFeature
 from transformers.generation import GenerationMixin, GenerationConfig
 from transformers.modeling_outputs import CausalLMOutputWithPast
 from transformers.models.auto import CONFIG_MAPPING, AutoConfig
 from transformers.processing_utils import ProcessorMixin, ProcessingKwargs
+from transformers.utils import is_torch_available
 import torch
 import types
 from typing import Optional, Tuple, Callable, Any, Union
 
 import copy
+
+try:
+    from transformers.audio_utils import make_list_of_audio as _hf_make_list_of_audio
+except ImportError:
+    _hf_make_list_of_audio = None
+
+def make_list_of_audio(audio):
+    if _hf_make_list_of_audio is not None:
+        return list(_hf_make_list_of_audio(audio))
+
+    if audio is None:
+        return []
+    if isinstance(audio, (str, bytes, np.ndarray, array)):
+        return [audio]
+    if isinstance(audio, torch.Tensor):
+        return [audio]
+    if isinstance(audio, (list, tuple)):
+        if len(audio) == 0:
+            return []
+        first = audio[0]
+        if isinstance(first, (int, float, np.integer, np.floating)):
+            return [np.asarray(audio)]
+        return list(audio)
+    return [audio]
 
 main_core = Core()
 
@@ -119,10 +143,14 @@ class OV_Operator(object):
             if amx_bf16 and cpu_model[0] > '5':
                 amx_f16 = True
         force_mode = int(os.environ.get('INTEL_FORCE_AMX', '0'))
-        if force_mode :
+        if force_mode == 1:
             amx_bf16 = True
+        elif force_mode == 2:
+            amx_bf16 = False
+            amx_f16 = False
         if not amx_bf16 and not amx_f16 :
             infer_type = 'f32'
+        
         if shape is not None :
             self.model.reshape({self.input_name: shape})
         config = self.prepare_for_cpu(stream_num, infer_type)
@@ -141,10 +169,10 @@ class OV_Operator(object):
 
     def prepare_for_cpu(self, stream_num, infer_type='bf16') :
         self.infer_type = infer_type
-        device = "CPU"
+        # device = "CPU"
+        # supported_properties = self.core.get_property(device, 'SUPPORTED_PROPERTIES')
         hint = 'THROUGHPUT' if stream_num>1 else 'LATENCY'
         config = {}
-        # supported_properties = self.core.get_property(device, 'SUPPORTED_PROPERTIES')
         config['NUM_STREAMS'] = str(stream_num)
         config['PERF_COUNT'] = 'NO'
         config['INFERENCE_PRECISION_HINT'] = infer_type #'bf16'#'f32'#'f16'
@@ -168,17 +196,18 @@ class OV_Operator(object):
     
     def multi_forward(self, input_tensors):
         # print(f"### Running inference with {self.name}")
-        if isinstance(input_tensors, list) :
-            nsize=len(input_tensors)
-        else :
-            nsize = 1
+        if isinstance(input_tensors, (list, tuple)):
+            batched_inputs = input_tensors
+        else:
+            batched_inputs = [input_tensors]
+        nsize = len(batched_inputs)
         if self.infer_queue is None or nsize==1:
             self.res.sync_clean()
-            for i, input_tensor in enumerate(input_tensors):
+            for i, input_tensor in enumerate(batched_inputs):
                 result = self.request.infer(input_tensor, share_inputs=False)
                 self.res.sync_parser(result, i)
         elif self.infer_queue :
-            for i, input_tensor in enumerate(input_tensors):
+            for i, input_tensor in enumerate(batched_inputs):
                 self.infer_queue.start_async(input_tensor, userdata=i, share_inputs=False)
             self.infer_queue.wait_all()
         else :
