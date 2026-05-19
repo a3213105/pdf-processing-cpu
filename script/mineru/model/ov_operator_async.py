@@ -107,6 +107,22 @@ class OV_Operator(object):
         self.request = self.exec_net_single.create_infer_request()
 
     def setup_model(self, stream_num, infer_type, shape = None) :
+        import cpuinfo
+        amx_bf16 = False
+        amx_f16 = False
+        info = cpuinfo.get_cpu_info()
+        cpu_brand = info['brand_raw'].split()[0].lower()
+        if 'intel' in cpu_brand:
+            cpu_model = info['brand_raw'].split()[-1]
+            if 'amx_bf16' in info['flags']:
+                amx_bf16 = True
+            if amx_bf16 and cpu_model[0] > '5':
+                amx_f16 = True
+        force_mode = int(os.environ.get('INTEL_FORCE_AMX', '0'))
+        if force_mode :
+            amx_bf16 = True
+        if not amx_bf16 and not amx_f16 :
+            infer_type = 'f32'
         if shape is not None :
             self.model.reshape({self.input_name: shape})
         config = self.prepare_for_cpu(stream_num, infer_type)

@@ -48,25 +48,58 @@ def _percentile(sorted_values, p):
 
 
 def print_single_response(data):
-    print(f"JSON response:{data.keys()} {len(data['json_raw'])} {data['latency']:.6f} seconds")
-    for line in data['json_raw']:
-        if line['type'] == 'text' :
-            print(f"{line['page_idx']}, {line['type']}, "
-                    f"{line['text'] if len(line['text']) < 5 else len(line['text'])}")
-        elif line['type'] == 'image' :
-            print(f"{line['page_idx']}, {line['type']}, "
-                    f"{line['img_caption'][0] if len(line['img_caption'][0]) < 5 else len(line['img_caption'][0])}, "
-                    f"{line['img_footnote'] if len(line['img_footnote']) == 0 else len(line['img_footnote'][0])}")
-        elif line['type'] == 'table' :
-            print(f"{line['page_idx']}, {line['type']}, "
-                    f"{line['table_caption'][0] if len(line['table_caption'][0]) < 5 else len(line['table_caption'][0])}, "
-                    f"{line['table_footnote'] if len(line['table_footnote']) == 0 else len(line['table_footnote'][0])}")
-        elif line['type'] == 'equation' :
-            print(f"{line['page_idx']}, {line['type']}, "
-                    f"{line['text'] if len(line['text']) == 0 else len(line['text'][0])}, "
-                    f"{line['text_format']}")
-        else :
-            print(f"### {line['page_idx']}, {line['type']}, {line.keys()}")
+    if isinstance(data, dict) and "outputs" in data and "success" in data:
+        print(f"success={data.get('success')} message={data.get('message')}")
+        outputs = data.get("outputs") or []
+        if outputs:
+            first = outputs[0] if isinstance(outputs[0], dict) else {}
+            md_raw_text = first.get("md_raw") if isinstance(first, dict) else None
+            print(
+                "output:",
+                {
+                    "output_path": first.get("output_path"),
+                    "md_path": first.get("md_path"),
+                    "images_md_dir": first.get("images_md_dir"),
+                    "md_raw_len": len(md_raw_text) if isinstance(md_raw_text, str) else None,
+                },
+            )
+        return
+
+    if not isinstance(data, dict):
+        print(data)
+        return
+
+    latency = data.get("latency")
+    json_raw = data.get("json_raw")
+    md_raw = data.get("md_raw")
+    print(
+        f"JSON response keys={list(data.keys())}, "
+        f"json_raw_type={type(json_raw).__name__}, "
+        f"md_raw_len={len(md_raw) if isinstance(md_raw, str) else 'None'}, "
+        f"latency={latency if latency is not None else 'None'}"
+    )
+
+    if isinstance(json_raw, list):
+        for line in json_raw:
+            if not isinstance(line, dict) or "type" not in line:
+                continue
+            if line['type'] == 'text' :
+                print(f"{line['page_idx']}, {line['type']}, "
+                        f"{line['text'] if len(line['text']) < 5 else len(line['text'])}")
+            elif line['type'] == 'image' :
+                print(f"{line['page_idx']}, {line['type']}, "
+                        f"{line['img_caption'][0] if len(line['img_caption'][0]) < 5 else len(line['img_caption'][0])}, "
+                        f"{line['img_footnote'] if len(line['img_footnote']) == 0 else len(line['img_footnote'][0])}")
+            elif line['type'] == 'table' :
+                print(f"{line['page_idx']}, {line['type']}, "
+                        f"{line['table_caption'][0] if len(line['table_caption'][0]) < 5 else len(line['table_caption'][0])}, "
+                        f"{line['table_footnote'] if len(line['table_footnote']) == 0 else len(line['table_footnote'][0])}")
+            elif line['type'] == 'equation' :
+                print(f"{line['page_idx']}, {line['type']}, "
+                        f"{line['text'] if len(line['text']) == 0 else len(line['text'][0])}, "
+                        f"{line['text_format']}")
+            else :
+                print(f"### {line['page_idx']}, {line['type']}, {line.keys()}")
 
 
 def send_one_request(url, pdf_name, pdf_bytes, timeout):

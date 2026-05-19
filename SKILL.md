@@ -13,41 +13,48 @@ Convert PDF documents to Markdown format, preserving document structure, formula
 
 **Parameters**:
 - `input` (string, required): Absolute path to the PDF file
-- `output_dir` (string, required): Absolute path to the output directory
+- `app` (boolean, required): Use local parse mode (`--app`)
+- `config` (string, recommended): Path to `script/mineru.json`
 
 **Return Value**:
 ```json
 #Complete processing
 {
   "success": true,
-  "message" : "processing info", 
+  "message" : "processing info",
   "outputs":
   [
     {
-      "input_name" : "/path/to/input",
-      "output_path": "/path/to/output"
-    },
-    {
-      "input_name" : "/path/to/input",
-      "output_path": "/path/to/output"
+      "output_path": "/tmp/pdf_ocr_output/demo1.pdf",
+      "md_path": "/tmp/pdf_ocr_output/demo1.pdf/demo1.pdf.md",
+      "images_md_dir": "/tmp/pdf_ocr_output/demo1.pdf/images_md",
+      "md_raw": "...full markdown text..."
     }
   ]
 }
 
 #Failed
 {
-  "success": False,
-  "message" : "error info",
+  "success": false,
+  "message" : "processing info, error=...",
+  "outputs": [
+    {
+      "output_path": null,
+      "md_path": null,
+      "images_md_dir": null,
+      "md_raw": null
+    }
+  ]
 }
 ```
 
 **Examples**:
 ```bash
 #output markdown
-python script/main.py -i /path/to/document.pdf -o output_dir
+python script/main.py --app -i /path/to/document.pdf --config script/mineru.json
 
 #or dir for PDF
-python script/main.py -i /path/to/documents_dir -o output_dir
+python script/main.py --app -i /path/to/documents_dir --config script/mineru.json
 
 ```
 

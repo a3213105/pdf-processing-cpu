@@ -234,11 +234,15 @@ def run_app_benchmark(pdf_instance: PDF_Instance, pdf_files, repeat, warmup, out
             json.dump(summary, f, indent=2, ensure_ascii=False)
         print(f"Saved benchmark summary to: {output_json}")
 
-def print_processing_info(input_name, output_path, json_raw, md_raw, latency, output_meta=None):
+def print_processing_info(input_name, output_path, json_raw, md_raw, latency, output_meta=None, error=None):
     message = f"Processed {input_name}, json_raw={len(json_raw) if json_raw is not None else 'None'}, md_raw={len(md_raw) if md_raw is not None else 'None'}, latency={latency:.6f} seconds"
+    if error:
+        message = f"{message}, error={error}"
     output_item = {
+        "output_path": output_path,
         "md_path": None,
         "images_md_dir": None,
+        "md_raw": md_raw,
     }
     if isinstance(output_meta, dict):
         for key in ["md_path", "images_md_dir"]:
@@ -279,7 +283,7 @@ def run_local_files(pdf_instance: PDF_Instance, pdf_files):
             output_path = output_meta.get("output_dir") if isinstance(output_meta, dict) else None
             print_processing_info(full_path, output_path, json_raw, md_raw, latency, output_meta=output_meta)
         except Exception as exc:
-            print_processing_info(full_path, None, None, None, 0.0)
+            print_processing_info(full_path, None, None, None, 0.0, error=str(exc))
 
 def verify_output() -> str:
     return json.dumps(

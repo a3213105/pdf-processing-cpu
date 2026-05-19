@@ -381,6 +381,7 @@ def _process_pipeline_cache(
                     "output_dir": local_md_dir,
                     "output_file_name": output_file_name,
                     "md_path": os.path.join(local_md_dir, f"{output_file_name}.md"),
+                    "images_md_dir": os.path.join(local_md_dir, "images_md"),
                     "middle_json_path": os.path.join(local_md_dir, f"{output_file_name}_middle.json"),
                     "model_json_path": os.path.join(local_md_dir, f"{output_file_name}_model.json"),
                 }
@@ -635,6 +636,7 @@ def _process_pipeline_nocache(
                         "output_dir": local_md_dir,
                         "output_file_name": output_file_name,
                         "md_path": md_output_path,
+                        "images_md_dir": os.path.join(local_md_dir, "images_md"),
                         "middle_json_path": middle_json_path,
                         "model_json_path": model_json_path,
                     }
