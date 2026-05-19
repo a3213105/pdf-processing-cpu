@@ -44,10 +44,10 @@ Convert PDF documents to Markdown format, preserving document structure, formula
 **Examples**:
 ```bash
 #output markdown
-python $HOME/.openclaw/workspace/skills/pdf-processing-cpu/script/main.py -i /path/to/document.pdf -o output_dir
+python script/main.py -i /path/to/document.pdf -o output_dir
 
 #or dir for PDF
-python $HOME/.openclaw/workspace/skills/pdf-processing-cpu/script/main.py -i /path/to/documents_dir -o output_dir
+python script/main.py -i /path/to/documents_dir -o output_dir
 
 ```
 
@@ -57,17 +57,17 @@ python $HOME/.openclaw/workspace/skills/pdf-processing-cpu/script/main.py -i /pa
 
 ### 1. install Requirements
 ```bash
-pip install -r $HOME/.openclaw/workspace/skills/pdf-processing-cpu/requirements.txt
+pip install -r requirements.txt
 ```
 
 ### 2. download models
 ```bash
-modelscope download --model a3213105/pdf-processing-cpu --local_dir $HOME/.openclaw/workspace/skills/pdf-processing-cpu/models
+bash script/prepare_models.sh /path/to/model_dir modelscope
 ```
 
 ### 3. Verify Installation
 ```bash
-python $HOME/.openclaw/workspace/skills/pdf-processing-cpu/script/main.py -v
+python script/main.py -v
 ```
 
 ### 4. System Requirements
@@ -92,8 +92,11 @@ python $HOME/.openclaw/workspace/skills/pdf-processing-cpu/script/main.py -v
 
 1. **File Paths**: All paths must be absolute paths
 2. **Output Directory**: Non-existent directories will be created automatically
-3. **Performance**: Using XEON with AMX can significantly improve parsing speed
-5. **Memory**: Processing large documents may consume more memory
+3. **Entry**: The current skill entrypoint is `script/main.py`
+4. **Performance**: Using XEON with AMX can significantly improve parsing speed
+5. **Cache**: Cache is enabled by default; use `--disable-cache` to reduce memory usage
+6. **Low-memory Fallback**: If detected system memory is `<4GB` at startup, cache is automatically disabled
+7. **Memory**: Processing large documents may consume more memory
 
 ## Troubleshooting
 

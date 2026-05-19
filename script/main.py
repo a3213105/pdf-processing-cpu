@@ -1,65 +1,48 @@
-import json
 import os
 os.environ["YOLO_VERBOSE"] = 'False'
-from pathlib import Path
-from pdf_rec import PDF_Instance, process_pdf_file
-from utils import parse_args
+
+from entry_args import parse_args
+from entry_args import normalize_infer_types
+from http_server import create_app
+from pdf_runtime import (
+    PDF_Instance,
+    collect_pdf_inputs,
+    run_app_benchmark,
+    run_local_files,
+    verify_output,
+)
 
 
+def run():
+    args = parse_args()
+    args = normalize_infer_types(args)
 
-def main(args, pdf_instance):
-    output_md_list = process_pdf_file(pdf_instance, args.input, args.return_md, args.return_json, args.return_layout, args.return_span, args.output_dir)
-    outputs = []
-    output_info = f"Processed {len(output_md_list)} PDF files successfully."
-    for input_name, output_md_filename, *_ in output_md_list:
-        outputs.append({
-            "input_name": str(input_name),
-            "output_path": str(output_md_filename),
-            })
+    if args.verify:
+        print(verify_output())
+        return
 
-    return json.dumps({
-            "success": True,
-            "message": output_info,
-            "outputs": outputs,
-            }, ensure_ascii=False, default=str)
+    pdf_instance = PDF_Instance(args)
+
+    if args.app:
+        if args.input is None:
+            print("app mode need set input")
+            return
+
+        pdf_files = collect_pdf_inputs(args.input)
+        if len(pdf_files) == 0:
+            print("app mode need set valid pdf input")
+            return
+
+        if args.benchmark:
+            run_app_benchmark(pdf_instance, pdf_files, args.repeat, args.warmup, args.benchmark_json)
+        else:
+            run_local_files(pdf_instance, pdf_files)
+    else:
+        if args.benchmark:
+            print("--benchmark works only in app mode (--app). Use client.py to benchmark serving mode.")
+        app = create_app(pdf_instance)
+        app.run(host='0.0.0.0', port=5000)
+
 
 if __name__ == '__main__':
-    try :
-        args = parse_args()
-        if args.all is not None :
-            args.all = args.all.lower()
-            args.layout_type = args.all
-            args.mfd_type = args.all
-            args.mfr_enc_type = args.all
-            args.mfr_dec_type = args.all
-            args.ocr_det_type = args.all
-            args.ocr_rec_type = args.all
-            args.table_type = args.all
-            args.lang_type = args.all
-            args.page_type = args.all
-        else :
-            args.layout_type = args.layout_type.lower()
-            args.mfd_type = args.mfd_type.lower()
-            args.mfr_enc_type = args.mfr_enc_type.lower()
-            args.mfr_dec_type = args.mfr_dec_type.lower()
-            args.ocr_det_type = args.ocr_det_type.lower()
-            args.ocr_rec_type = args.ocr_rec_type.lower()
-            args.table_type = args.table_type.lower()
-            args.lang_type = args.lang_type.lower()
-            args.page_type = args.page_type.lower()
-        pdf_instance = PDF_Instance(args)
-        if args.verify :
-            output_json_str = json.dumps([{
-                "success": True,
-                "message": "Installation Verified Successfully",
-                "outputs": [],
-            }])
-        else :
-            output_json_str = main(args, pdf_instance)
-    except Exception as e:
-        output_json_str = json.dumps([{
-            "success": False,
-            "message": str(e),
-            "outputs": [],
-        }])
-    print(output_json_str)
+    run()

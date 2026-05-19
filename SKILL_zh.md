@@ -45,10 +45,10 @@ description: 基于 Intel® Xeon® AMX 指令集优化加速的本地化 MinerU 
 **示例**：
 ```bash
 # 输出 markdown
-python $HOME/.openclaw/workspace/skills/pdf-processing-cpu/script/main.py -i /path/to/document.pdf -o output_dir
+python script/main.py -i /path/to/document.pdf -o output_dir
 
 #or dir for PDF
-python $HOME/.openclaw/workspace/skills/pdf-processing-cpu/script/main.py -i /path/to/documents_dir -o output_dir
+python script/main.py -i /path/to/documents_dir -o output_dir
 
 ```
 
@@ -58,17 +58,17 @@ python $HOME/.openclaw/workspace/skills/pdf-processing-cpu/script/main.py -i /pa
 
 ### 1. 安装依赖
 ```bash
-pip install -r $HOME/.openclaw/workspace/skills/pdf-processing-cpu/requirements.txt
+pip install -r requirements.txt
 ```
 
 ### 2. 下载模型
 ```bash
-modelscope download --model a3213105/pdf-processing-cpu --local_dir $HOME/.openclaw/workspace/skills/pdf-processing-cpu/models
+bash script/prepare_models.sh /path/to/model_dir modelscope
 ```
 
 ### 2. 验证安装
 ```bash
-python $HOME/.openclaw/workspace/skills/pdf-processing-cpu/script/main.py -v
+python script/main.py -v
 ```
 
 ### 3. 系统要求
@@ -92,8 +92,11 @@ python $HOME/.openclaw/workspace/skills/pdf-processing-cpu/script/main.py -v
 
 1. **文件路径**：所有路径必须是绝对路径  
 2. **输出目录**：不存在的目录会自动创建  
-3. **性能**：使用带 AMX 的 XEON 可显著提升解析速度  
-5. **内存**：处理大型文档可能消耗更多内存  
+3. **入口文件**：当前技能入口为 `script/main.py`  
+4. **性能**：使用带 AMX 的 XEON 可显著提升解析速度  
+5. **缓存策略**：默认启用 cache；可通过 `--disable-cache` 降低内存占用  
+6. **低内存自动降级**：启动时检测到系统内存 `<4GB` 会自动关闭 cache  
+7. **内存**：处理大型文档可能消耗更多内存  
 
 ## 故障排除
 

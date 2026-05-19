@@ -1,22 +1,112 @@
-# OpenClaw Skill - pdf-processing-cpu
+# PDF Processing CPU
 
-基于 Intel® Xeon® AMX 指令集优化加速的本地化 MinerU PDF 文档解析工具，支持将 PDF 转换为 Markdown
+## 0. Directory Layout
 
-## 功能概览
+Core runtime files are under the `script/` directory:
 
-- 识别PDF文件，生成markdown结构化数据
-- 零成本调用： 部署于本地服务器，无需支付按分钟或 Token 计费的 API 费用
-- 硬核加速： 深度集成 Intel AMX 矩阵加速技术，针对 BF16/INT8 混合精度推理进行调优，CPU 处理速度可媲美入门级 GPU。
+- `script/main.py`: Skill entrypoint (recommended)
+- `script/app.py`: 保留的服务实现（含 `PDF_Instance`）
+- `script/entry_args.py`: argument definitions
+- `script/pdf_runtime.py`: runtime/benchmark helpers
+- `script/http_server.py`: HTTP route wrapper
+- `script/client.py`: HTTP client
+- `script/prepare_models.sh`: model download script
+- `script/mineru.json`: MinerU config
 
-## 技术特性
-- 算子级优化： 基于 Intel® Xeon® AMX 指令集优化加速
+## 1. Installation
 
-## 典型输入
+### 1.1 Prerequisites
 
-- pdf文档
+- Python 3.10+
+- Linux (recommended)
 
-## 典型输出
+### 1.2 Install dependencies
 
-- Markdown文件
+Run from the repository root:
 
-See SKILL.md for usage and tuning.
+```bash
+pip install -r requirements.txt
+```
+
+Or use the install script:
+
+```bash
+bash install.sh
+```
+
+### 1.3 Prepare models
+
+```bash
+bash script/prepare_models.sh /PATH/TO/MODEL_OUTPUT modelscope
+```
+
+or:
+
+```bash
+bash script/prepare_models.sh /PATH/TO/MODEL_OUTPUT huggingface
+```
+
+## 2. Local Batch Mode (Recommended)
+
+Use the skill entrypoint:
+
+```bash
+python script/main.py -i /PATH/TO/PDF/FILE -o /PATH/TO/OUTPUT_DIR
+```
+
+Batch directory:
+
+```bash
+python script/main.py -i /PATH/TO/PDF_DIR -o /PATH/TO/OUTPUT_DIR
+```
+
+Verify installation:
+
+```bash
+python script/main.py -v
+```
+
+## 3. Key Arguments
+
+The following arguments are for `script/main.py`:
+
+- `-i, --input`: input PDF file or directory
+- `-o, --output_dir`: output directory
+- `-n, --nstreams`: number of OpenVINO streams (default: `8`)
+- `-c, --disable-cache`: disable cache to reduce memory usage
+- `-j, --return_json`: output JSON
+- `-m, --return_md`: output Markdown (enabled by default)
+- `-v, --verify`: verify installation
+
+Cache behavior:
+
+- Cache is enabled by default.
+- If total system memory is detected as `<4GB` at startup, cache is automatically disabled.
+- You can force cache off with `--disable-cache`.
+
+## 4. HTTP Service Mode (Optional)
+
+Start service:
+
+```bash
+python script/app.py
+```
+
+Request example:
+
+```bash
+curl --noproxy "*" -X POST http://127.0.0.1:5000/ \
+	-F "file=@/PATH/TO/PDF/FILE;type=application/pdf"
+```
+
+Or use client:
+
+```bash
+python script/client.py --url http://127.0.0.1:5000/ --pdf /PATH/TO/PDF/FILE
+```
+
+## 5. Troubleshooting
+
+- `script/main.py` reports config errors: check whether `script/mineru.json` is correct.
+- First run is slow: model loading and warmup are expected.
+- High memory usage on large PDFs: use `--disable-cache` first.
