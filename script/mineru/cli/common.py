@@ -213,7 +213,7 @@ def _process_output(
     if f_dump_md:
         make_func = pipeline_union_make
         md_output = make_func(pdf_info, f_make_md_mode, image_dir)
-        md_output = _split_images_by_md_references(local_md_dir, pdf_file_name, md_output)
+        md_output = _split_images_by_md_references(local_md_dir, pdf_file_name, str(md_output) if md_output is not None else "")
         md_writer.write_string(f"{pdf_file_name}.md", md_output,)
 
     if f_dump_content_list:
@@ -336,6 +336,7 @@ def _process_pipeline_cache(
 
     md_outputs = ""
     json_outputs = ""
+    output_metas = []
     for idx, model_list in enumerate(infer_results):
         pdf_doc = None
         images_list = None
@@ -344,7 +345,8 @@ def _process_pipeline_cache(
         try:
             _trace_stage("pipeline_cache.doc_begin", index=idx, page_count=len(model_list))
             model_json = copy.deepcopy(model_list) if f_dump_model_output else None
-            pdf_file_name = pdf_file_names[idx]
+            original_pdf_file_name = pdf_file_names[idx]
+            pdf_file_name = original_pdf_file_name
             local_image_dir, local_md_dir = prepare_env(output_dir, pdf_file_name, parse_method)
             image_writer, md_writer = FileBasedDataWriter(local_image_dir), FileBasedDataWriter(local_md_dir)
 
@@ -358,12 +360,13 @@ def _process_pipeline_cache(
 
             pdf_info = middle_json["pdf_info"]
             pdf_bytes = pdf_bytes_list[idx]
+            output_file_name = pdf_file_name
             if start_page_id != 0 or end_page_id is not None:
                 if end_page_id is None:
                     end_page_id = len(pdf_doc) - 1 + start_page_id
-                pdf_file_name = f"{pdf_file_name}_{start_page_id}_{end_page_id}"
+                output_file_name = f"{pdf_file_name}_{start_page_id}_{end_page_id}"
 
-            md_output, json_output = _process_output(pdf_info, pdf_bytes, pdf_file_name, local_md_dir, local_image_dir,
+            md_output, json_output = _process_output(pdf_info, pdf_bytes, output_file_name, local_md_dir, local_image_dir,
                             md_writer, f_draw_layout_bbox, f_draw_span_bbox, f_dump_orig_pdf,
                             f_dump_md, f_dump_content_list, f_dump_middle_json, f_dump_model_output,
                             f_make_md_mode, f_draw_line_sort_bbox, middle_json, model_json, is_pipeline=True)
@@ -371,6 +374,17 @@ def _process_pipeline_cache(
                 md_outputs += str(md_output)
             if json_output:
                 json_outputs += str(json_output)
+
+            output_metas.append(
+                {
+                    "input_name": original_pdf_file_name,
+                    "output_dir": local_md_dir,
+                    "output_file_name": output_file_name,
+                    "md_path": os.path.join(local_md_dir, f"{output_file_name}.md"),
+                    "middle_json_path": os.path.join(local_md_dir, f"{output_file_name}_middle.json"),
+                    "model_json_path": os.path.join(local_md_dir, f"{output_file_name}_model.json"),
+                }
+            )
             _trace_stage("pipeline_cache.doc_output_done", index=idx)
         finally:
             infer_results[idx] = []
@@ -392,7 +406,7 @@ def _process_pipeline_cache(
     ocr_enabled_list.clear()
     gc.collect()
     _trace_stage("pipeline_cache.done")
-    return md_outputs, json_outputs
+    return md_outputs, json_outputs, output_metas
 
 def _process_pipeline_nocache(
         output_dir,
@@ -422,6 +436,7 @@ def _process_pipeline_nocache(
 
     md_outputs = ""
     json_outputs = ""
+    output_metas = []
     page_chunk_size = max(1, int(os.getenv("MINERU_PAGE_CHUNK_SIZE", "1") or 1))
     emit_outputs = any([
         f_draw_layout_bbox,
@@ -614,6 +629,17 @@ def _process_pipeline_nocache(
                 if f_dump_md and os.path.exists(md_output_path):
                     _split_images_by_md_references(local_md_dir, output_file_name)
 
+                output_metas.append(
+                    {
+                        "input_name": pdf_file_name,
+                        "output_dir": local_md_dir,
+                        "output_file_name": output_file_name,
+                        "md_path": md_output_path,
+                        "middle_json_path": middle_json_path,
+                        "model_json_path": model_json_path,
+                    }
+                )
+
                 _trace_stage("pipeline_nocache.doc_output_done", file=pdf_file_name)
             else:
                 _trace_stage("pipeline_nocache.doc_output_skipped", file=pdf_file_name)
@@ -637,7 +663,7 @@ def _process_pipeline_nocache(
             gc.collect()
             _trace_stage("pipeline_nocache.doc_cleanup_done", file=pdf_file_name)
     _trace_stage("pipeline_nocache.done")
-    return md_outputs, json_outputs
+    return md_outputs, json_outputs, output_metas
 
 def _process_pipeline(
         output_dir,
@@ -880,14 +906,18 @@ def do_parse(
         f_draw_line_sort_bbox=True,
         start_page_id=0,
         end_page_id=None,
+        return_output_meta=False,
         **kwargs,
 ):
     # Preprocess PDF byte data
     pdf_bytes_list = _prepare_pdf_bytes(pdf_bytes_list, start_page_id, end_page_id)
-    return _process_pipeline(output_dir, pdf_file_names, pdf_bytes_list, p_lang_list, parse_method,
+    md_outputs, json_outputs, output_metas = _process_pipeline(output_dir, pdf_file_names, pdf_bytes_list, p_lang_list, parse_method,
                           formula_enable, table_enable, f_draw_layout_bbox, f_draw_span_bbox, f_dump_md,
                           f_dump_middle_json, f_dump_model_output, f_dump_orig_pdf, f_dump_content_list,
                           f_make_md_mode, f_draw_line_sort_bbox, BatchAnalyze, start_page_id, end_page_id)
+    if return_output_meta:
+        return md_outputs, json_outputs, output_metas
+    return md_outputs, json_outputs
 
     # if backend == "pipeline":
         # return _process_pipeline(output_dir, pdf_file_names, pdf_bytes_list, p_lang_list, parse_method,
@@ -956,14 +986,18 @@ async def aio_do_parse(
         f_draw_line_sort_bbox=True,
         start_page_id=0,
         end_page_id=None,
+        return_output_meta=False,
         **kwargs,
 ):
     # Preprocess PDF byte data
     pdf_bytes_list = _prepare_pdf_bytes(pdf_bytes_list, start_page_id, end_page_id)
-    return _process_pipeline(output_dir, pdf_file_names, pdf_bytes_list, p_lang_list, parse_method,
+    md_outputs, json_outputs, output_metas = _process_pipeline(output_dir, pdf_file_names, pdf_bytes_list, p_lang_list, parse_method,
                           formula_enable, table_enable, f_draw_layout_bbox, f_draw_span_bbox, f_dump_md,
                           f_dump_middle_json, f_dump_model_output, f_dump_orig_pdf, f_dump_content_list,
                           f_make_md_mode, f_draw_line_sort_bbox, BatchAnalyze, start_page_id, end_page_id)
+    if return_output_meta:
+        return md_outputs, json_outputs, output_metas
+    return md_outputs, json_outputs
 
     # if backend == "pipeline":
     #     # pipelineThe mode does not currently support asynchronous processing. Use synchronous processing.

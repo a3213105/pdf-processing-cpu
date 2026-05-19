@@ -5,7 +5,7 @@ import time
 
 from flask import Flask, request, jsonify
 
-from pdf_runtime import download_file, load_pdf_file, release_request_memory
+from pdf_runtime import download_file, load_pdf_file, release_request_memory, print_processing_info
 
 
 def create_app(pdf_instance):
@@ -65,8 +65,9 @@ def create_app(pdf_instance):
             md_raw, json_raw = pdf_instance.process_pdf(pdf_raw, file_name=parse_file_name)
             end_time = time.perf_counter()
             latency = end_time - start_time
-            print(f"Processed {parse_file_name} in {latency:.6f} seconds")
-            return jsonify({'json_raw': json_raw, 'md_raw': md_raw, 'latency': latency})
+            process_info = print_processing_info(parse_file_name, pdf_instance.output_dir, json_raw, md_raw, latency)
+            return jsonify(process_info)
+            # return jsonify({'json_raw': json_raw, 'md_raw': md_raw, 'latency': latency})
         finally:
             if md_raw is not None:
                 del md_raw

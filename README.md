@@ -5,7 +5,7 @@
 Core runtime files are under the `script/` directory:
 
 - `script/main.py`: Skill entrypoint (recommended)
-- `script/app.py`: 保留的服务实现（含 `PDF_Instance`）
+- `script/app.py`: retained service implementation (includes `PDF_Instance`)
 - `script/entry_args.py`: argument definitions
 - `script/pdf_runtime.py`: runtime/benchmark helpers
 - `script/http_server.py`: HTTP route wrapper

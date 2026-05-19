@@ -1,6 +1,7 @@
 import ctypes
 import gc
 import json
+from multiprocessing import process
 import os
 import statistics
 import time
@@ -86,8 +87,8 @@ class PDF_Instance:
         )
         self.output_dir = "/tmp/pdf_ocr_output"
 
-    def process_pdf(self, pdf_bytes: bytes, file_name: str = "input.pdf") -> Any:
-        return do_parse(
+    def process_pdf(self, pdf_bytes: bytes, file_name: str = "input.pdf", return_output_meta: bool = False) -> Any:
+        result = do_parse(
             output_dir=self.output_dir,
             pdf_file_names=[file_name],
             pdf_bytes_list=[pdf_bytes],
@@ -108,7 +109,15 @@ class PDF_Instance:
             f_draw_line_sort_bbox=False,
             start_page_id=0,
             end_page_id=None,
+            return_output_meta=return_output_meta,
         )
+        if return_output_meta:
+            if not isinstance(result, tuple) or len(result) != 3:
+                raise RuntimeError("Invalid parse result when return_output_meta=True")
+            md_raw, json_raw, output_metas = result
+            output_meta = output_metas[0] if output_metas else None
+            return md_raw, json_raw, output_meta
+        return result
 
     def release_request_cache(self) -> None:
         if not self.release_model_per_request:
@@ -225,19 +234,52 @@ def run_app_benchmark(pdf_instance: PDF_Instance, pdf_files, repeat, warmup, out
             json.dump(summary, f, indent=2, ensure_ascii=False)
         print(f"Saved benchmark summary to: {output_json}")
 
+def print_processing_info(input_name, output_path, json_raw, md_raw, latency, output_meta=None):
+    message = f"Processed {input_name}, json_raw={len(json_raw) if json_raw is not None else 'None'}, md_raw={len(md_raw) if md_raw is not None else 'None'}, latency={latency:.6f} seconds"
+    output_item = {
+        "md_path": None,
+        "images_md_dir": None,
+    }
+    if isinstance(output_meta, dict):
+        for key in ["md_path", "images_md_dir"]:
+            if key in output_meta and output_meta.get(key) is not None:
+                output_item[key] = output_meta.get(key)
+
+    if output_path is None:
+         info = {
+            "success": False,
+            "message" : message,
+            "outputs": [
+                output_item
+            ]
+        }
+    else :
+        info = {
+            "success": True,
+            "message": message,
+            "outputs": [
+                output_item
+            ]
+        }
+    print(json.dumps(info, ensure_ascii=False, indent=2))
+    return info
 
 def run_local_files(pdf_instance: PDF_Instance, pdf_files):
     for full_path in pdf_files:
-        pdf_raw = load_pdf_file(full_path)
-        start_time = time.perf_counter()
-        md_raw, json_raw = pdf_instance.process_pdf(pdf_raw, file_name=os.path.basename(full_path))
-        end_time = time.perf_counter()
-        latency = end_time - start_time
-        print(
-            f"Processed {full_path}, json_raw={len(json_raw) if json_raw is not None else 'None'}, "
-            f"md_raw={len(md_raw) if md_raw is not None else 'None'}, latency={latency:.6f} seconds"
-        )
-
+        try :
+            pdf_raw = load_pdf_file(full_path)
+            start_time = time.perf_counter()
+            md_raw, json_raw, output_meta = pdf_instance.process_pdf(
+                pdf_raw,
+                file_name=os.path.basename(full_path),
+                return_output_meta=True,
+            )
+            end_time = time.perf_counter()
+            latency = end_time - start_time
+            output_path = output_meta.get("output_dir") if isinstance(output_meta, dict) else None
+            print_processing_info(full_path, output_path, json_raw, md_raw, latency, output_meta=output_meta)
+        except Exception as exc:
+            print_processing_info(full_path, None, None, None, 0.0)
 
 def verify_output() -> str:
     return json.dumps(
