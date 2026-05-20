@@ -41,7 +41,7 @@ def run():
         if args.benchmark:
             print("--benchmark works only in app mode (--app). Use client.py to benchmark serving mode.")
         app = create_app(pdf_instance)
-        app.run(host='0.0.0.0', port=5000)
+        app.run(host='0.0.0.0', port=5000, threaded=False)
 
 
 if __name__ == '__main__':

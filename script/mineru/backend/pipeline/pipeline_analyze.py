@@ -144,7 +144,7 @@ def doc_analyze(batch_model, pdf_bytes_list, lang_list, parse_method: str = 'aut
 
 
 def doc_analyze_1by1(batch_model, pdf_bytes, lang, parse_method: str = 'auto',
-                     start_page_id=0, end_page_id=None,):
+                     start_page_id=0, end_page_id=None, page_index_offset=0,):
     # Determine OCR settings
     _ocr_enable = False
 
@@ -162,7 +162,15 @@ def doc_analyze_1by1(batch_model, pdf_bytes, lang, parse_method: str = 'auto',
     page_image_info_all = []
     results = []
     for page_idx in range(start_page_id, end_page_id+1):
-        page_image_info = load_image_from_pdf(pdf_bytes, pdf_doc, image_type=ImageType.PIL, start_page_id=page_idx, end_page_id=page_idx,)[0]
+        page_image_info = load_image_from_pdf(
+            pdf_bytes,
+            pdf_doc,
+            image_type=ImageType.PIL,
+            start_page_id=page_idx,
+            end_page_id=page_idx,
+            log_start_page_id=page_idx + page_index_offset,
+            log_end_page_id=page_idx + page_index_offset,
+        )[0]
         page_image = page_image_info['img_pil']
         batch_image = [(page_image, _ocr_enable, _lang)]
 

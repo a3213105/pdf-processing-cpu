@@ -496,7 +496,15 @@ def _process_pipeline_nocache(
                 _trace_stage("pipeline_nocache.chunk_pdf_ready", file=pdf_file_name, chunk_start=chunk_start, chunk_end=chunk_end, bytes=len(chunk_pdf_bytes))
 
                 model_list, images_list, pdf_doc, _lang, _ocr_enable = (
-                    pipeline_doc_analyze(batch_model, chunk_pdf_bytes, p_lang, parse_method=parse_method, start_page_id=0, end_page_id=None)
+                    pipeline_doc_analyze(
+                        batch_model,
+                        chunk_pdf_bytes,
+                        p_lang,
+                        parse_method=parse_method,
+                        start_page_id=0,
+                        end_page_id=None,
+                        page_index_offset=chunk_start,
+                    )
                 )
                 _trace_stage("pipeline_nocache.chunk_analyze_done", file=pdf_file_name, chunk_start=chunk_start, pages=len(model_list))
 

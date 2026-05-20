@@ -2,6 +2,7 @@ import json
 import os
 import uuid
 import time
+import threading
 
 from flask import Flask, request, jsonify
 
@@ -10,9 +11,13 @@ from pdf_runtime import download_file, load_pdf_file, release_request_memory, pr
 
 def create_app(pdf_instance):
     app = Flask(__name__)
+    request_lock = threading.Lock()
 
     @app.route('/', methods=['POST'])
     def pdf_process():
+        if not request_lock.acquire(blocking=False):
+            return jsonify({"error": "Server busy, only one request is processed at a time"}), 429
+
         pdf_raw = None
         md_raw = None
         json_raw = None
@@ -91,5 +96,6 @@ def create_app(pdf_instance):
                 del pdf_raw
             pdf_instance.release_request_cache()
             release_request_memory()
+            request_lock.release()
 
     return app

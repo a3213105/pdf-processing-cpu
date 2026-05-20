@@ -201,6 +201,8 @@ def load_image_from_pdf(
     dpi=200,
     start_page_id=0,
     end_page_id=None,
+    log_start_page_id=None,
+    log_end_page_id=None,
     image_type=ImageType.PIL,
     timeout=None,
     threads=None,
@@ -241,7 +243,9 @@ def load_image_from_pdf(
     )
 
 
-    logger.debug(f"PDF to images using {actual_threads} processes, page ranges: {start_page_id}-{end_page_id}")
+    display_start = start_page_id if log_start_page_id is None else log_start_page_id
+    display_end = end_page_id if log_end_page_id is None else log_end_page_id
+    logger.debug(f"PDF to images using {actual_threads} processes, page ranges: {display_start}-{display_end}")
 
     if is_windows_environment() or actual_threads <= 1:
         # Windows Do not use multiple processes in the environment
