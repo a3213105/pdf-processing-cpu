@@ -211,7 +211,8 @@ class PytorchPaddleOCR(TextSystem):
             warnings.simplefilter("ignore", category=RuntimeWarning)
             if det and rec:
                 ocr_res = []
-                for img in imgs:
+                # for img in imgs:
+                for img in tqdm(imgs, desc=tqdm_desc, disable=not tqdm_enable):
                     img = preprocess_image(img)
                     dt_boxes, rec_res = self.__call__(img, mfd_res=mfd_res)
                     if not dt_boxes and not rec_res:

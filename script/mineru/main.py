@@ -107,6 +107,7 @@ def parse_doc(path_list: list[Path], output_dir, BatchAnalyze,
                 f_draw_line_sort_bbox=return_line,
                 start_page_id=start_page_id,
                 end_page_id=end_page_id,
+                tqdm_enable = True
             )
             del pdf_bytes
     except Exception as e:

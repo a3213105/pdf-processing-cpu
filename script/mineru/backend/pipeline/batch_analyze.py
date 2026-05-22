@@ -82,23 +82,16 @@ class BatchAnalyze:
 
         # doclayout_yolo
 
-        images_layout_res += self.model.get_layout_model().batch_predict(
-            pil_images, YOLO_LAYOUT_BASE_BATCH_SIZE
-        )
+        images_layout_res += self.model.get_layout_model().batch_predict(pil_images, YOLO_LAYOUT_BASE_BATCH_SIZE, tqdm_enable=tqdm_enable)
         del pil_images
 
         if self.formula_enable:
             # Formula detection
-            images_mfd_res = self.model.get_mfd_model().batch_predict(
-                np_images, MFD_BASE_BATCH_SIZE
-            )
+            images_mfd_res = self.model.get_mfd_model().batch_predict(np_images, MFD_BASE_BATCH_SIZE, tqdm_enable=tqdm_enable)
 
             # Formula recognition
-            images_formula_list = self.model.get_mfr_model().batch_predict(
-                images_mfd_res,
-                np_images,
-                batch_size=self.batch_ratio * MFR_BASE_BATCH_SIZE,
-            )
+            images_formula_list = self.model.get_mfr_model().batch_predict(images_mfd_res, np_images,
+                batch_size=self.batch_ratio * MFR_BASE_BATCH_SIZE, tqdm_enable=tqdm_enable)
             mfr_count = 0
             for image_index in range(len(np_images)):
                 images_layout_res[image_index] += images_formula_list[image_index]
@@ -165,12 +158,11 @@ class BatchAnalyze:
 
                 for table_chunk in iter_chunks:
                     if self.enable_ocr_det_batch:
-                        img_orientation_cls_model.batch_predict(table_chunk,
-                                                                det_batch_size=self.batch_ratio * OCR_DET_BASE_BATCH_SIZE,
-                                                                batch_size=TABLE_ORI_CLS_BATCH_SIZE)
+                        img_orientation_cls_model.batch_predict(table_chunk, det_batch_size=self.batch_ratio * OCR_DET_BASE_BATCH_SIZE,
+                                                                batch_size=TABLE_ORI_CLS_BATCH_SIZE, tqdm_enable=tqdm_enable)
                     else:
                         for table_res in table_chunk:
-                            rotate_label = img_orientation_cls_model.predict(table_res['table_img'])
+                            rotate_label = img_orientation_cls_model.predict(table_res['table_img'], tqdm_enable=tqdm_enable)
                             img_orientation_cls_model.img_rotate(table_res, rotate_label)
             except Exception as e:
                 logger.warning(
@@ -178,15 +170,14 @@ class BatchAnalyze:
                 )
 
             # Table classification
-            table_cls_model = self.model.get_table_cls_model()
             try:
                 if self.enable_cache:
                     iter_chunks = [table_res_list_all_page]
                 else:
                     iter_chunks = split_chunks(table_res_list_all_page, table_chunk_size)
+                table_cls_model = self.model.get_table_cls_model()
                 for table_chunk in iter_chunks:
-                    table_cls_model.batch_predict(table_chunk,
-                                                  batch_size=TABLE_Wired_Wireless_CLS_BATCH_SIZE)
+                    table_cls_model.batch_predict(table_chunk, batch_size=TABLE_Wired_Wireless_CLS_BATCH_SIZE, tqdm_enable=tqdm_enable)
             except Exception as e:
                 logger.warning(
                     f"Table classification failed: {e}, using default model"
@@ -199,7 +190,7 @@ class BatchAnalyze:
             if self.enable_cache:
                 for index, table_res_dict in enumerate(tqdm(table_res_list_all_page, desc=tqdm_desc, disable=not tqdm_enable)):
                     bgr_image = cv2.cvtColor(table_res_dict["table_img"], cv2.COLOR_RGB2BGR)
-                    ocr_result = det_ocr_engine.ocr(bgr_image, rec=False)[0]
+                    ocr_result = det_ocr_engine.ocr(bgr_image, rec=False, tqdm_enable=tqdm_enable)[0]
                     table_lang = table_res_dict["lang"]
                     for dt_box in ocr_result:
                         rec_img_lang_group[table_lang].append(
@@ -229,10 +220,10 @@ class BatchAnalyze:
                 for table_chunk in split_chunks(table_res_list_all_page, table_chunk_size):
                     for table_res_dict in tqdm(table_chunk, desc=tqdm_desc, disable=not tqdm_enable):
                         bgr_image = cv2.cvtColor(table_res_dict["table_img"], cv2.COLOR_RGB2BGR)
-                        ocr_result = det_ocr_engine.ocr(bgr_image, rec=False)[0]
+                        table_lang = table_res_dict["lang"]
+                        ocr_result = det_ocr_engine.ocr(bgr_image, rec=False, tqdm_enable=tqdm_enable, tqdm_desc=f"Table-rec-table-{table_lang}")[0]
                         if not ocr_result:
                             continue
-                        table_lang = table_res_dict["lang"]
                         ocr_engine = self.model.get_ocr_model(det_db_box_thresh=0.5, det_db_unclip_ratio=1.6, enable_merge_det_boxes=False, lang=table_lang)
                         rec_inputs = []
                         dt_boxes_list = []
@@ -244,7 +235,7 @@ class BatchAnalyze:
                         ocr_res_list = ocr_engine.ocr(
                             rec_inputs,
                             det=False,
-                            tqdm_enable=False,
+                            tqdm_enable=tqdm_enable,
                             tqdm_desc=f"Table-rec-{table_lang}",
                         )[0]
                         table_res_dict["ocr_result"] = [
@@ -263,7 +254,7 @@ class BatchAnalyze:
 
             tdpm_desc = f"Table-wired Predict with OV_{self.wired_table_type}" if self.enable_ov else "Table-wired Predict"
             for table_chunk in iter_chunks:
-                wireless_table_model.batch_predict(table_chunk)
+                wireless_table_model.batch_predict(table_chunk, tqdm_enable=tqdm_enable)
 
                 wired_table_res_list = []
                 for table_res_dict in table_chunk:
@@ -285,7 +276,8 @@ class BatchAnalyze:
                         table_res_dict["table_res"]["html"] = wired_table_model.predict(
                             table_res_dict["wired_table_img"],
                             table_res_dict["ocr_result"],
-                            table_res_dict["table_res"].get("html", None)
+                            table_res_dict["table_res"].get("html", None),
+                            tqdm_enable=tqdm_enable
                         )
 
                 for table_res_dict in table_chunk:
@@ -303,8 +295,8 @@ class BatchAnalyze:
         # OCR det
         if self.enable_ocr_det_batch:
             RESOLUTION_GROUP_STRIDE = 64
-            tpdmg_desc = f"OCR-det Predict with OV_{self.OCR_det_infer_type}" if self.enable_ov else "OCR-det Predict"
-            for ocr_res_list_dict in tqdm(ocr_res_list_all_page, desc=tpdmg_desc, disable=not tqdm_enable):
+            tqdm_desc = f"OCR-det Predict batch with OV_{self.OCR_det_infer_type}" if self.enable_ov else "OCR-det Predict"
+            for ocr_res_list_dict in tqdm(ocr_res_list_all_page, desc=tqdm_desc, disable=not tqdm_enable):
                 _lang = ocr_res_list_dict['lang']
                 ocr_model = self.model.get_ocr_model(det_db_box_thresh=0.3,lang=_lang,)
 
@@ -333,7 +325,7 @@ class BatchAnalyze:
                         batch_images.append(padded_img)
 
                     det_batch_size = min(len(batch_images), self.batch_ratio * OCR_DET_BASE_BATCH_SIZE)
-                    batch_results = ocr_model.text_detector.batch_predict(batch_images, det_batch_size)
+                    batch_results = ocr_model.text_detector.batch_predict(batch_images, det_batch_size, tqdm_enable=tqdm_enable)
 
                     for (bgr_image, useful_list, adjusted_mfdetrec_res), (dt_boxes, _) in zip(group_crops, batch_results):
                         if dt_boxes is None or len(dt_boxes) == 0:
@@ -350,13 +342,11 @@ class BatchAnalyze:
                         ocr_res = [box.tolist() if hasattr(box, 'tolist') else box for box in dt_boxes_final]
                         ocr_result_list = get_ocr_result_list(ocr_res, useful_list, ocr_res_list_dict['ocr_enable'], bgr_image, _lang,)
                         ocr_res_list_dict['layout_res'].extend(ocr_result_list)
-
                 del resolution_groups
-
         else:
             # Raw single frame processing mode
-            tpdmg_desc = f"OCR-det Predict with OV_{self.OCR_det_infer_type}" if self.enable_ov else "OCR-det Predict"
-            for ocr_res_list_dict in tqdm(ocr_res_list_all_page, desc=tpdmg_desc, disable=not tqdm_enable):
+            tqdm_desc = f"OCR-det-rec Predict with OV_{self.OCR_det_infer_type}" if self.enable_ov else "OCR-det-rec Predict"
+            for ocr_res_list_dict in tqdm(ocr_res_list_all_page, desc=tqdm_desc, disable=not tqdm_enable):
                 # Process each area that requires OCR processing
                 _lang = ocr_res_list_dict['lang']
                 # Get OCR results for this language's images
@@ -365,21 +355,16 @@ class BatchAnalyze:
                     new_image, useful_list = crop_img(
                         res, ocr_res_list_dict['np_img'], crop_paste_x=50, crop_paste_y=50
                     )
-                    adjusted_mfdetrec_res = get_adjusted_mfdetrec_res(
-                        ocr_res_list_dict['single_page_mfdetrec_res'], useful_list
-                    )
+                    adjusted_mfdetrec_res = get_adjusted_mfdetrec_res(ocr_res_list_dict['single_page_mfdetrec_res'], useful_list)
                     # OCR-det
                     bgr_image = cv2.cvtColor(new_image, cv2.COLOR_RGB2BGR)
-                    ocr_res = ocr_model.ocr(
-                        bgr_image, mfd_res=adjusted_mfdetrec_res, rec=False
-                    )[0]
+                    ocr_res = ocr_model.ocr(bgr_image, mfd_res=adjusted_mfdetrec_res, rec=False, tqdm_enable=tqdm_enable)[0]
 
                     # Integration results
                     if ocr_res:
                         ocr_result_list = get_ocr_result_list(
                             ocr_res, useful_list, ocr_res_list_dict['ocr_enable'],bgr_image, _lang
                         )
-
                         ocr_res_list_dict['layout_res'].extend(ocr_result_list)
 
         # OCR rec
@@ -390,23 +375,21 @@ class BatchAnalyze:
                 if layout_res_item['category_id'] in [15]:
                     if 'np_img' in layout_res_item and 'lang' in layout_res_item:
                         lang = layout_res_item['lang']
-
                         ocr_items_by_lang[lang].append((layout_res_item, layout_res_item['np_img']))
-
                         # Remove the fields after adding to lists
                         layout_res_item.pop('np_img')
                         layout_res_item.pop('lang')
 
         if len(ocr_items_by_lang) > 0:
             # Process each language separately
-            for lang, item_img_pairs in ocr_items_by_lang.items():
+            tqdm_desc = f"OCR-rec Predict with OV_{self.OCR_rec_infer_type}" if self.enable_ov else "OCR-rec Predict"
+            for lang, item_img_pairs in tqdm(ocr_items_by_lang.items(), desc=tqdm_desc, disable=not tqdm_enable):
+            # for lang, item_img_pairs in ocr_items_by_lang.items():
                 if len(item_img_pairs) > 0:
                     # Get OCR results for this language's images
-
                     ocr_model = self.model.get_ocr_model(det_db_box_thresh=0.3,lang=lang,)
                     img_crop_list = [pair[1] for pair in item_img_pairs]
                     ocr_res_list = ocr_model.ocr(img_crop_list, det=False, tqdm_enable=tqdm_enable)[0]
-
                     # Verify we have matching counts
                     assert len(ocr_res_list) == len(
                         item_img_pairs), f'ocr_res_list: {len(ocr_res_list)}, need_ocr_list: {len(item_img_pairs)} for lang: {lang}'

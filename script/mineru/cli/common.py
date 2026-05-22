@@ -323,14 +323,15 @@ def _process_pipeline_cache(
         f_draw_line_sort_bbox,
         batch_model,
         start_page_id=0,
-        end_page_id=None
+        end_page_id=None,
+        tqdm_enable = False
 ):
     """Handle pipeline back-end logic"""
     from mineru.backend.pipeline.model_json_to_middle_json import result_to_middle_json as pipeline_result_to_middle_json
     from mineru.backend.pipeline.pipeline_analyze import doc_analyze as pipeline_doc_analyze
    
     infer_results, all_image_lists, all_pdf_docs, lang_list, ocr_enabled_list = (
-        pipeline_doc_analyze(batch_model, pdf_bytes_list, p_lang_list,  parse_method=parse_method)
+        pipeline_doc_analyze(batch_model, pdf_bytes_list, p_lang_list,  parse_method=parse_method, tqdm_enable=tqdm_enable)
     )
     _trace_stage("pipeline_cache.analyze_done", file_count=len(infer_results))
 
@@ -428,7 +429,8 @@ def _process_pipeline_nocache(
         f_draw_line_sort_bbox,
         batch_model,
         start_page_id=0,
-        end_page_id=None
+        end_page_id=None,
+        tqdm_enable = False
 ):
     """Handle pipeline back-end logic"""
     from mineru.backend.pipeline.model_json_to_middle_json import result_to_middle_json as pipeline_result_to_middle_json
@@ -496,15 +498,7 @@ def _process_pipeline_nocache(
                 _trace_stage("pipeline_nocache.chunk_pdf_ready", file=pdf_file_name, chunk_start=chunk_start, chunk_end=chunk_end, bytes=len(chunk_pdf_bytes))
 
                 model_list, images_list, pdf_doc, _lang, _ocr_enable = (
-                    pipeline_doc_analyze(
-                        batch_model,
-                        chunk_pdf_bytes,
-                        p_lang,
-                        parse_method=parse_method,
-                        start_page_id=0,
-                        end_page_id=None,
-                        page_index_offset=chunk_start,
-                    )
+                    pipeline_doc_analyze(batch_model, chunk_pdf_bytes, p_lang, parse_method=parse_method, start_page_id=0, end_page_id=None, page_index_offset=chunk_start, tqdm_enable=tqdm_enable)
                 )
                 _trace_stage("pipeline_nocache.chunk_analyze_done", file=pdf_file_name, chunk_start=chunk_start, pages=len(model_list))
 
@@ -694,20 +688,21 @@ def _process_pipeline(
         f_draw_line_sort_bbox,
         BatchAnalyze,
         start_page_id=0,
-        end_page_id=None
+        end_page_id=None,
+        tqdm_enable = False
 ):
     if BatchAnalyze.enable_cache:
         return _process_pipeline_cache(output_dir, pdf_file_names, pdf_bytes_list, p_lang_list, parse_method,
                                 p_formula_enable, p_table_enable, f_draw_layout_bbox, f_draw_span_bbox,
                                 f_dump_md, f_dump_middle_json, f_dump_model_output, f_dump_orig_pdf,
                                 f_dump_content_list, f_make_md_mode, f_draw_line_sort_bbox, BatchAnalyze,
-                                start_page_id, end_page_id)
+                                start_page_id, end_page_id, tqdm_enable)
     else :
         return _process_pipeline_nocache(output_dir, pdf_file_names, pdf_bytes_list, p_lang_list, parse_method,
                                 p_formula_enable, p_table_enable, f_draw_layout_bbox, f_draw_span_bbox,
                                 f_dump_md, f_dump_middle_json, f_dump_model_output, f_dump_orig_pdf,
                                 f_dump_content_list, f_make_md_mode, f_draw_line_sort_bbox, BatchAnalyze,
-                                start_page_id, end_page_id)
+                                start_page_id, end_page_id, tqdm_enable)
 
 # async def _async_process_vlm(
 #         output_dir,
@@ -917,6 +912,7 @@ def do_parse(
         start_page_id=0,
         end_page_id=None,
         return_output_meta=False,
+        tqdm_enable = False,
         **kwargs,
 ):
     # Preprocess PDF byte data
@@ -924,7 +920,7 @@ def do_parse(
     md_outputs, json_outputs, output_metas = _process_pipeline(output_dir, pdf_file_names, pdf_bytes_list, p_lang_list, parse_method,
                           formula_enable, table_enable, f_draw_layout_bbox, f_draw_span_bbox, f_dump_md,
                           f_dump_middle_json, f_dump_model_output, f_dump_orig_pdf, f_dump_content_list,
-                          f_make_md_mode, f_draw_line_sort_bbox, BatchAnalyze, start_page_id, end_page_id)
+                          f_make_md_mode, f_draw_line_sort_bbox, BatchAnalyze, start_page_id, end_page_id, tqdm_enable)
     if return_output_meta:
         return md_outputs, json_outputs, output_metas
     return md_outputs, json_outputs

@@ -79,7 +79,7 @@ def custom_model_init(
     return custom_model
 
 
-def doc_analyze(batch_model, pdf_bytes_list, lang_list, parse_method: str = 'auto',):
+def doc_analyze(batch_model, pdf_bytes_list, lang_list, parse_method: str = 'auto', tqdm_enable=False):
     """
     Appropriately increasing MIN_BATCH_INFERENCE_SIZE can improve performance. Larger MIN_BATCH_INFERENCE_SIZEWill consume more memory,
     It can be set through the environment variable MINERU_MIN_BATCH_INFERENCE_SIZE. The default value is 384.
@@ -116,7 +116,7 @@ def doc_analyze(batch_model, pdf_bytes_list, lang_list, parse_method: str = 'aut
             current_page_indices.append(page_idx)
 
             if len(current_batch) >= min_batch_inference_size:
-                batch_results = batch_image_analyze(batch_model, current_batch)
+                batch_results = batch_image_analyze(batch_model, current_batch, tqdm_enable=tqdm_enable)
                 for local_idx, result in zip(current_page_indices, batch_results):
                     pil_img = images_list[local_idx]['img_pil']
                     page_info_dict = {'page_no': local_idx, 'width': pil_img.width, 'height': pil_img.height}
@@ -125,7 +125,7 @@ def doc_analyze(batch_model, pdf_bytes_list, lang_list, parse_method: str = 'aut
                 current_page_indices.clear()
 
         if current_batch:
-            batch_results = batch_image_analyze(batch_model, current_batch)
+            batch_results = batch_image_analyze(batch_model, current_batch, tqdm_enable=tqdm_enable)
             for local_idx, result in zip(current_page_indices, batch_results):
                 pil_img = images_list[local_idx]['img_pil']
                 page_info_dict = {'page_no': local_idx, 'width': pil_img.width, 'height': pil_img.height}
@@ -144,7 +144,7 @@ def doc_analyze(batch_model, pdf_bytes_list, lang_list, parse_method: str = 'aut
 
 
 def doc_analyze_1by1(batch_model, pdf_bytes, lang, parse_method: str = 'auto',
-                     start_page_id=0, end_page_id=None, page_index_offset=0,):
+                     start_page_id=0, end_page_id=None, page_index_offset=0, tqdm_enable=False):
     # Determine OCR settings
     _ocr_enable = False
 
@@ -175,7 +175,7 @@ def doc_analyze_1by1(batch_model, pdf_bytes, lang, parse_method: str = 'auto',
         batch_image = [(page_image, _ocr_enable, _lang)]
 
         # Execute batch processing
-        batch_results = batch_image_analyze(batch_model, batch_image)
+        batch_results = batch_image_analyze(batch_model, batch_image, tqdm_enable=tqdm_enable)
         # Build return results
         page_info_dict = {'page_no': page_idx, 'width': page_image.width, 'height': page_image.height}
         page_dict = {'layout_dets': batch_results[0], 'page_info': page_info_dict}
@@ -231,7 +231,7 @@ def get_batch_info():
     return batch_ratio, enable_ocr_det_batch
 
 
-def batch_image_analyze(batch_model, images_with_extra_info: List[Tuple[Image.Image, bool, str]]):
-    results = batch_model(images_with_extra_info)
+def batch_image_analyze(batch_model, images_with_extra_info: List[Tuple[Image.Image, bool, str]], tqdm_enable):
+    results = batch_model(images_with_extra_info, tqdm_enable=tqdm_enable)
     clean_memory(get_device())
     return results
